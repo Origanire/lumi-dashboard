@@ -6,7 +6,9 @@ Projet de tableau de bord réalisé dans le cadre du module G-WEB-500.
 
 ## Présentation
 
-[Décrire ici l'objectif du projet, les utilisateurs visés et les principales fonctionnalités.]
+L'application proposera un tableau de bord personnalisable avec des services et des widgets.
+
+Pour cette première étape, une page React permet de tester la communication avec une API TypeScript via le bouton **Tester la connexion**.
 
 Le sujet du projet est disponible dans [dashboard-project.pdf](./dashboard-project.pdf).
 
@@ -14,27 +16,63 @@ La liste des tâches et des priorités est disponible dans [TODO.md](./TODO.md).
 
 ## Technologies utilisées
 
-- Frontend : [à compléter]
-- Backend : [à compléter]
-- Base de données : [à compléter]
+- Frontend : React en JavaScript (JSX), avec Vite.
+- Backend : Node.js en TypeScript, avec le module HTTP natif.
+- Base de données : à choisir ultérieurement.
 
 ## Prérequis
 
-[Indiquer les outils nécessaires et leurs versions.]
+Node.js 20.19 ou supérieur et npm.
+
+## Organisation
+
+- `frontend/` : interface React et configuration Vite.
+- `backend/` : API TypeScript et test de communication.
+- `package.json` : commandes communes et workspaces npm.
 
 ## Installation
 
 1. Cloner le dépôt et ouvrir le dossier du projet.
-2. Installer les dépendances : [commande à compléter].
-3. Configurer les variables d'environnement si nécessaire, à partir d'un fichier `.env.example` à ajouter au projet.
+2. Installer toutes les dépendances depuis la racine :
+
+```bash
+npm install
+```
+
+## Configuration
+
+Aucun secret ni fichier `.env` ne sont nécessaires pour cette étape. Le backend écoute sur `127.0.0.1:3001` et le frontend sur `localhost:5174`. En développement, Vite transmet les requêtes `/api` au backend via le proxy défini dans `frontend/vite.config.js`.
 
 ## Lancement
 
-[Ajouter les commandes pour lancer le projet en développement et en production.]
+### Développement
+
+Depuis la racine :
+
+```bash
+npm run dev
+```
+
+Ouvrir http://localhost:5174 puis cliquer sur **Tester la connexion**. Le message « Connexion réussie ! » confirme la réponse du backend. Les deux serveurs se relancent automatiquement lors des modifications. Utiliser `Ctrl+C` pour les arrêter.
+
+L’API est aussi accessible directement : http://127.0.0.1:3001/api/health.
+
+### Compilation et production
+
+```bash
+npm run build
+npm start
+```
+
+`npm start` lance uniquement le backend compilé. Pour déployer le frontend, servir les fichiers de `frontend/dist/` avec un serveur web et configurer ce serveur pour transmettre `/api` au backend. Le déploiement complet sera mis en place dans une prochaine étape.
 
 ## Tests
 
-[Indiquer comment exécuter les tests.]
+```bash
+npm test
+```
+
+Le test backend vérifie la réponse de `/api/health` et le code 404 d’une route inconnue.
 
 ## Équipe
 
