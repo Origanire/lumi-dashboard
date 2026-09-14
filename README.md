@@ -57,6 +57,14 @@ Ouvrir http://localhost:5174 puis cliquer sur **Tester la connexion**. Le messag
 
 L’API est aussi accessible directement : http://127.0.0.1:3001/api/health.
 
+### Documentation interactive — Swagger UI
+
+Avec `npm run dev` lancé, ouvrir http://localhost:5174/api/docs (ou directement http://127.0.0.1:3001/api/docs).
+
+Déplier **GET /api/health**, cliquer sur **Try it out**, puis **Execute** pour envoyer une requête et afficher la réponse du backend.
+
+La spécification OpenAPI est disponible sur `/api/openapi.json`. Elle est définie dans `backend/src/openapi.ts` et devra être complétée lors de l'ajout de nouvelles routes. Les fichiers Swagger UI sont servis localement par le backend, sans CDN.
+
 ### Compilation et production
 
 ```bash
@@ -72,7 +80,7 @@ npm start
 npm test
 ```
 
-Le test backend vérifie la réponse de `/api/health` et le code 404 d’une route inconnue.
+Le test backend vérifie la réponse de `/api/health`, la page Swagger UI et ses ressources, la spécification OpenAPI et le code 404 d’une route inconnue.
 
 ## Équipe
 
