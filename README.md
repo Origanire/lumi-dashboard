@@ -10,6 +10,8 @@ Projet de tableau de bord réalisé dans le cadre du module G-WEB-500.
 
 Le sujet du projet est disponible dans [dashboard-project.pdf](./dashboard-project.pdf).
 
+La liste des tâches et des priorités est disponible dans [TODO.md](./TODO.md).
+
 ## Technologies utilisées
 
 - Frontend : [à compléter]
