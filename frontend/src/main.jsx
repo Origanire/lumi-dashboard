@@ -16,7 +16,7 @@ function Dashboard({ user, onLogout }) {
   return (
     <div className="dashboard-page">
       <header className="dashboard-header">
-        <a className="brand" href="/"><span className="brand-mark">L</span><span>LUMI</span></a>
+        <a className="brand" href="/"><span className="brand-mark">LU</span><span>LUMI</span></a>
         <div className="dashboard-account"><span>{user.name}</span><button className="logout-button" onClick={onLogout}>Se déconnecter</button></div>
       </header>
       <main className="dashboard-main">
@@ -108,7 +108,7 @@ function App() {
     <div className="site-shell">
       <a className="skip-link" href="#main">Aller au contenu</a>
       <header className="site-header">
-        <a className="brand" href="/" aria-label="Lumi, accueil"><span className="brand-mark">L</span><span>LUMI</span></a>
+        <a className="brand" href="/" aria-label="Lumi, accueil"><span className="brand-mark">LU</span><span>LUMI</span></a>
         <nav aria-label="Navigation principale">
           <a href="#connection">Connexion</a>
           <a href="#architecture">Architecture</a>
@@ -192,7 +192,7 @@ function App() {
         <section className="login-modal" role="dialog" aria-modal="true" aria-labelledby="login-title">
           <button className="modal-close" onClick={() => setLoginOpen(false)} aria-label="Fermer">×</button>
           <p className="section-label"><span>01</span> Espace personnel</p>
-          <h2 id="login-title">Bienvenue sur Lumi.</h2>
+          <h2 id="login-title">Bienvenue sur <span className="lumi-word">Lumi</span>.</h2>
           <p>Connectez-vous pour accéder à votre dashboard.</p>
           <form onSubmit={handleLogin}>
             <label htmlFor="email">Adresse e-mail</label>
