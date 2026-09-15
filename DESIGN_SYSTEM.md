@@ -23,8 +23,9 @@ Le blanc cassé domine les pages. Le noir structure la lecture par des titres, d
 
 ## Typographies
 
-- Police principale : `Inter`, puis les polices système sans-serif.
-- Police identitaire : `Nothing 5x7`, réservée au logotype, aux numéros et aux mots de grande taille.
+- Police principale : `Inter`, puis les polices système sans-serif, pour le corps et les contrôles.
+- Police d'affichage : `Anton`, réservée aux grands titres éditoriaux.
+- Police identitaire : `Nothing 5x7`, réservée au logotype, aux numéros et aux micro-détails.
 - H1 : 58–92 px, graisse 650, interligne 0,97.
 - H2 : 42–66 px, graisse 620, interligne 1,04.
 - H3 : 22–25 px, graisse 580.
