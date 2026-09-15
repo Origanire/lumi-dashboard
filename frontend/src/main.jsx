@@ -64,14 +64,14 @@ function App() {
             <section className="connection-panel" aria-labelledby="connection-title">
               <div className="panel-heading"><span className="icon-box"><Icon name="pulse" /></span><h3 id="connection-title">Connexion au serveur</h3><span className={`connection-badge ${loading ? 'pending' : connection}`}><span className="status-dot" />{label}</span></div>
               <p className="panel-description">Vérifie que ton espace communique avec l’API.</p>
-              <div className="connection-flow"><div><span className="flow-marker">01</span><strong>Interface</strong><span>React · JavaScript</span></div><span className={`flow-line ${connection === 'success' && !loading ? 'connected' : ''}`} aria-hidden="true">→</span><div><span className="flow-marker">02</span><strong>Serveur</strong><span>Node.js · TypeScript</span></div></div>
+              <div className="connection-flow"><div><span className="flow-marker">01</span><strong>Interface</strong><span>React · JavaScript</span></div><span className={`flow-line ${connection === 'success' && !loading ? 'connected' : ''}`} aria-hidden="true">→</span><div><span className="flow-marker">02</span><strong>Serveur</strong><span>Axum · Rust</span></div></div>
               <div className={`response-box ${connection === 'error' ? 'error' : ''}`} role="status" aria-live="polite"><span className="response-label">{connection === 'success' && !loading ? 'RÉPONSE DU SERVEUR' : 'ÉTAT DE LA CONNEXION'}</span><p>{message}</p></div>
               <div className="panel-actions"><button onClick={testConnection} disabled={loading}><Icon name="pulse" size={16} />{loading ? 'Test en cours…' : 'Tester la connexion'}</button><span className="last-check">{lastCheck ? `Dernier test à ${lastCheck}` : 'Aucun test effectué'}</span></div>
             </section>
             <section className="api-panel" aria-labelledby="api-title"><div className="api-panel-top"><span className="icon-box"><Icon name="server" /></span><span className="mono">API / 01</span></div><h3 id="api-title">Documentation<br />API.</h3><p>Explore les endpoints et teste leurs réponses depuis la documentation interactive.</p><div className="endpoint"><span>GET</span><code>/api/health</code></div><a className="documentation-link" href="/api/docs" target="_blank" rel="noreferrer">Ouvrir Swagger UI <Icon name="arrow" size={17} /></a></section>
           </div>
           <section className="next-section" aria-labelledby="next-title"><div className="next-number mono">02</div><div><h2 id="next-title">Prochaines étapes</h2><p>Comptes utilisateurs, services et widgets personnalisables.</p></div><span className="planned-badge">À venir</span></section>
-          <footer className="page-footer"><span>Dashboard · Projet G-WEB-500</span><span className="mono">REACT + TYPESCRIPT</span></footer>
+          <footer className="page-footer"><span>Dashboard · Projet G-WEB-500</span><span className="mono">REACT + RUST</span></footer>
         </main>
       </div>
     </div>
