@@ -1,5 +1,5 @@
 {
-  "name": "dashboard",
+  "name": "lumi",
   "version": "0.1.0",
   "private": true,
   "workspaces": ["frontend"],

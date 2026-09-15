@@ -1,4 +1,4 @@
-# Dashboard
+# Lumi
 
 Projet de tableau de bord réalisé dans le cadre du module G-WEB-500.
 

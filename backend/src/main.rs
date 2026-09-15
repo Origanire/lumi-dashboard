@@ -6,7 +6,7 @@ async fn main() {
         .await
         .expect("impossible d'ouvrir le port 3001");
     println!("Backend Rust disponible sur http://127.0.0.1:3001");
-    axum::serve(listener, dashboard_backend::app())
+    axum::serve(listener, lumi_backend::app())
         .await
         .expect("erreur du serveur HTTP");
 }

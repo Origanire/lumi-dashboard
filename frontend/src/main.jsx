@@ -43,7 +43,7 @@ function App() {
     <div className="site-shell">
       <a className="skip-link" href="#main">Aller au contenu</a>
       <header className="site-header">
-        <a className="brand" href="/" aria-label="Dashboard, accueil"><span className="brand-mark">D</span><span>DASHBOARD</span></a>
+        <a className="brand" href="/" aria-label="Lumi, accueil"><span className="brand-mark">L</span><span>LUMI</span></a>
         <nav aria-label="Navigation principale">
           <a href="#connection">Connexion</a>
           <a href="#architecture">Architecture</a>
@@ -122,7 +122,7 @@ function App() {
         </section>
       </main>
 
-      <footer className="site-footer"><div className="footer-brand">DASHBOARD<span>Projet G-WEB-500</span></div><p>Un espace personnel.<br />Une vision plus claire.</p><div className="footer-meta"><a href="/api/docs" target="_blank" rel="noreferrer">Documentation API</a><span>React + Rust</span><span>2026</span></div></footer>
+      <footer className="site-footer"><div className="footer-brand">LUMI<span>Projet G-WEB-500</span></div><p>Un espace personnel.<br />Une vision plus claire.</p><div className="footer-meta"><a href="/api/docs" target="_blank" rel="noreferrer">Documentation API</a><span>React + Rust</span><span>2026</span></div></footer>
     </div>
   );
 }

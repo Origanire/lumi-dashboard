@@ -1,4 +1,4 @@
-# To-do list du projet Dashboard
+# To-do list du projet Lumi
 
 Cocher une tâche lorsqu'elle est terminée et vérifiée.
 

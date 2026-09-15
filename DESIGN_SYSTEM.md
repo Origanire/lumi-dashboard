@@ -1,4 +1,4 @@
-# Design system — Dashboard
+# Design system — Lumi
 
 ## Principes
 

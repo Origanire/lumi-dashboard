@@ -16,9 +16,9 @@ pub struct HealthResponse {
 #[derive(OpenApi)]
 #[openapi(
     info(
-        title = "Dashboard API",
+        title = "Lumi API",
         version = "0.1.0",
-        description = "API Rust du projet Dashboard."
+        description = "API Rust du projet Lumi."
     ),
     paths(health),
     components(schemas(HealthResponse)),
