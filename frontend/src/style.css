@@ -1,4 +1,12 @@
 @font-face {
+  font-family: 'Anton';
+  src: url('./assets/fonts/anton-latin-400.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
   font-family: 'Nothing 5x7';
   src: url('./assets/fonts/nothing-font-5x7.otf') format('opentype');
   font-style: normal;
@@ -45,7 +53,7 @@ main:focus { outline: none; }
 .section-label { display: flex; align-items: center; gap: 13px; margin: 0 0 27px; color: #6c6c68; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
 .section-label span { font-family: 'Nothing 5x7', sans-serif; color: #222; font-size: 15px; }
 h1, h2, h3, p { margin-top: 0; }
-h1 { margin-bottom: 30px; font-size: clamp(58px, 6.2vw, 92px); line-height: .97; letter-spacing: -.06em; font-weight: 650; }
+h1 { font-family: 'Anton', Impact, sans-serif; margin-bottom: 30px; font-size: clamp(58px, 6.2vw, 92px); line-height: .97; letter-spacing: -.06em; font-weight: 650; }
 h1 em, h2 em { color: #777773; font-style: normal; font-weight: 400; }
 .hero-intro { max-width: 570px; margin-bottom: 42px; color: var(--gray-700); font-size: 18px; line-height: 1.65; }
 .hero-actions { display: flex; align-items: center; gap: 28px; }
@@ -71,7 +79,7 @@ h1 em, h2 em { color: #777773; font-style: normal; font-weight: 400; }
 .statement p { margin: 0; font-size: 14px; }
 .statement p::before { content: '•'; margin-right: 16px; color: #777; }
 .connection-section { max-width: 1196px; margin: auto; padding: 150px 0; display: grid; grid-template-columns: .75fr 1.25fr; gap: 110px; align-items: center; }
-.section-intro h2, .architecture h2, .roadmap h2 { margin-bottom: 28px; font-size: clamp(42px, 5vw, 66px); line-height: 1.04; letter-spacing: -.05em; font-weight: 620; }
+.section-intro h2, .architecture h2, .roadmap h2 { font-family: 'Anton', Impact, sans-serif; margin-bottom: 28px; font-size: clamp(42px, 5vw, 66px); line-height: 1.04; letter-spacing: -.05em; font-weight: 620; }
 .section-intro > p:last-child { max-width: 390px; color: var(--gray-700); font-size: 16px; line-height: 1.7; }
 .connection-demo { min-height: 450px; padding: 30px; display: flex; flex-direction: column; background: white; border: 1px solid #e2e2dd; border-radius: 8px; box-shadow: 0 24px 70px #1111110b; }
 .demo-header, .demo-footer { display: flex; align-items: center; justify-content: space-between; gap: 20px; font-size: 12px; }
@@ -105,3 +113,36 @@ h1 em, h2 em { color: #777773; font-style: normal; font-weight: 400; }
 @media (max-width: 800px) { .site-header { height: 68px; padding: 0 20px; }.site-header nav { display: none; }.hero { min-height: auto; padding: 70px 22px; grid-template-columns: 1fr; gap: 60px; }.hero-visual { min-height: 400px; }.statement { padding: 28px 22px; flex-direction: column; gap: 12px; }.connection-section { margin: 0; padding: 90px 22px; grid-template-columns: 1fr; gap: 45px; }.architecture { padding: 90px 22px; grid-template-columns: 1fr; gap: 60px; }.roadmap { margin: 0; padding: 90px 22px; }.roadmap-heading { grid-template-columns: 1fr; gap: 10px; }.roadmap-list { margin-top: 55px; grid-template-columns: 1fr; }.roadmap-list article, .roadmap-list article + article { min-height: auto; padding: 28px 0; border-right: 0; border-bottom: 1px solid #d6d6d1; }.roadmap-list h3 { margin: 35px 0 12px; }.site-footer { padding: 48px 22px; grid-template-columns: 1fr; }.footer-meta { justify-items: start; }.technology-pair { grid-template-columns: 1fr 45px 1fr; } }
 @media (max-width: 480px) { h1 { font-size: 48px; }.hero-actions { align-items: flex-start; flex-direction: column; gap: 20px; }.hero-visual { min-height: 340px; padding: 20px; }.orbit-one { width: 220px; height: 220px; }.orbit-two { width: 285px; height: 170px; }.visual-core { width: 110px; height: 110px; }.connection-demo { padding: 20px; }.technology-pair { grid-template-columns: 1fr; gap: 22px; padding: 35px 0; }.exchange { transform: rotate(90deg); justify-self: center; width: 45px; }.demo-footer { align-items: flex-start; flex-direction: column; }.api-object { min-height: 320px; padding: 22px; }.api-route { gap: 12px; }.api-route code { font-size: 25px; } }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; }.reveal { animation: none; }.button, .demo-footer button { transition: none; } }
+
+/* Authentification et espace protégé */
+.login-trigger, .logout-button { padding: 10px 15px; border: 1px solid #111; border-radius: 5px; background: #111; color: white; cursor: pointer; font: inherit; font-size: 12px; transition: transform .25s, background .25s; }
+.login-trigger:hover, .logout-button:hover { background: #333; transform: translateY(-1px); }
+.modal-backdrop { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 20px; background: #11111180; backdrop-filter: blur(8px); animation: modal-in .25s ease both; }
+.login-modal { width: min(100%, 480px); position: relative; padding: 46px; background: #f7f7f5; border-radius: 8px; box-shadow: 0 30px 90px #0004; }
+.modal-close { width: 34px; height: 34px; position: absolute; top: 18px; right: 18px; border: 0; background: transparent; color: #555; font-size: 25px; cursor: pointer; }
+.login-modal h2 { font-family: 'Anton', Impact, sans-serif; margin-bottom: 12px; font-size: 37px; letter-spacing: -.04em; }
+.login-modal > p:not(.section-label) { margin-bottom: 30px; color: #666; font-size: 14px; }
+.login-modal form { display: grid; }
+.login-modal label { margin: 0 0 8px; color: #555; font-size: 11px; }
+.login-modal input { width: 100%; height: 48px; margin-bottom: 20px; padding: 0 14px; border: 1px solid #d2d2cd; border-radius: 5px; background: white; color: #111; font: inherit; font-size: 14px; }
+.login-modal input:focus { outline: 2px solid #111; outline-offset: 2px; }
+.login-submit { width: 100%; margin-top: 8px; justify-content: space-between; cursor: pointer; }
+.login-submit:disabled { opacity: .6; cursor: wait; }
+.auth-error { margin: -5px 0 12px; color: #aa2b24; font-size: 12px; }
+.login-modal > small { display: block; margin-top: 20px; color: #888; font-size: 10px; line-height: 1.5; }
+.dashboard-page { min-height: 100vh; background: #f7f7f5; }
+.dashboard-header { height: 76px; padding: 0 max(28px, calc((100vw - 1196px) / 2)); display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #deded9; }
+.dashboard-account { display: flex; align-items: center; gap: 20px; color: #666; font-size: 12px; }
+.logout-button { background: transparent; color: #111; }
+.logout-button:hover { color: white; }
+.dashboard-main { max-width: 1196px; margin: auto; padding: 110px 0; }
+.dashboard-main h1 { max-width: 900px; }
+.empty-dashboard { margin-top: 90px; min-height: 210px; padding: 40px; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 28px; background: white; border: 1px solid #e2e2dd; border-radius: 8px; }
+.empty-dashboard h2 { font-family: 'Anton', Impact, sans-serif; margin: 0 0 10px; font-size: 25px; letter-spacing: -.03em; }
+.empty-dashboard p { margin: 0; color: #70706c; font-size: 13px; }
+.empty-dashboard > span { color: #888; font-family: 'Nothing 5x7', sans-serif; font-size: 13px; }
+@keyframes modal-in { from { opacity: 0; } to { opacity: 1; } }
+@media (max-width: 800px) { .login-modal { padding: 38px 25px 28px; }.dashboard-header { padding: 0 20px; }.dashboard-account > span { display: none; }.dashboard-main { padding: 75px 22px; }.empty-dashboard { margin-top: 50px; padding: 28px 22px; grid-template-columns: auto 1fr; }.empty-dashboard > span { grid-column: 2; } }
+
+/* Anton porte les titres éditoriaux ; Nothing reste réservé aux détails identitaires. */
+h1, .section-intro h2, .architecture h2, .roadmap h2, .login-modal h2, .empty-dashboard h2 { font-weight: 400; letter-spacing: -.015em; }
