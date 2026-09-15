@@ -43,7 +43,7 @@ npm install
 
 ## Configuration
 
-Aucun secret ni fichier `.env` ne sont nécessaires pour cette étape. Le backend écoute sur `127.0.0.1:3001` et le frontend sur `localhost:5174`. En développement, Vite transmet les requêtes `/api` au backend via le proxy défini dans `frontend/vite.config.js`.
+Aucun secret ni fichier `.env` ne sont nécessaires pour cette démonstration. Le compte provisoire est `demo@lumi.local` avec le mot de passe `lumi-demo`. Le backend conserve uniquement un hash bcrypt du mot de passe et les sessions restent en mémoire. Les variables `LUMI_DEMO_EMAIL` et `LUMI_DEMO_PASSWORD_HASH` permettent de remplacer ce compte. Le backend écoute sur `127.0.0.1:3001` et le frontend sur `localhost:5174`. En développement, Vite transmet les requêtes `/api` au backend via le proxy défini dans `frontend/vite.config.js`.
 
 ## Lancement
 
@@ -82,7 +82,7 @@ npm start
 npm test
 ```
 
-Le test backend vérifie la réponse de `/api/health`, la page Swagger UI et ses ressources, la spécification OpenAPI et le code 404 d’une route inconnue.
+Les tests backend vérifient les routes publiques, la documentation OpenAPI ainsi que la connexion, la protection de session et la déconnexion.
 
 ## Équipe
 
