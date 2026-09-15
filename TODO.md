@@ -11,8 +11,8 @@ Le projet doit proposer au minimum **1 + X services** et **3 × X widgets au tot
 
 - [ ] Création de compte.
 - [ ] Confirmation de l'inscription.
-- [ ] Connexion et déconnexion.
-- [ ] Protection des pages accessibles uniquement aux utilisateurs connectés.
+- [x] Connexion et déconnexion.
+- [x] Protection des pages accessibles uniquement aux utilisateurs connectés.
 - [ ] Gestion des services auxquels l'utilisateur est abonné.
 - [ ] Au moins 1 + X services.
 - [ ] Au moins 3 × X widgets au total.
@@ -30,12 +30,12 @@ Le projet doit proposer au minimum **1 + X services** et **3 × X widgets au tot
 
 ### Sécurité
 
-- [ ] Ne jamais stocker les mots de passe en clair.
+- [x] Ne jamais stocker les mots de passe en clair.
 - [ ] Protéger les données personnelles.
 - [ ] Protéger les tokens OAuth et les identifiants externes.
 - [ ] Associer chaque donnée à l'utilisateur connecté.
-- [ ] Vérifier côté backend que l'utilisateur a le droit d'accéder à une ressource.
-- [ ] Ne jamais faire confiance uniquement aux contrôles du frontend.
+- [x] Vérifier côté backend que l'utilisateur a le droit d'accéder à une ressource.
+- [x] Ne jamais faire confiance uniquement aux contrôles du frontend.
 - [ ] Prévoir un système de variables d'environnement pour les secrets.
 
 ### Documentation — contenu du README
