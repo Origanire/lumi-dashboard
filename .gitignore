@@ -8,6 +8,7 @@ __pycache__/
 # Fichiers générés et rapports de tests
 dist/
 build/
+target/
 coverage/
 .next/
 .nuxt/
