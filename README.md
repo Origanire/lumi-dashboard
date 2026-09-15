@@ -14,6 +14,8 @@ Le sujet du projet est disponible dans [dashboard-project.pdf](./dashboard-proje
 
 La liste des tâches et des priorités est disponible dans [TODO.md](./TODO.md).
 
+Les règles visuelles et les composants de référence sont décrits dans [DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md).
+
 ## Technologies utilisées
 
 - Frontend : React en JavaScript (JSX), avec Vite.
