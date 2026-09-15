@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './style.css';
 
@@ -12,11 +12,74 @@ function Icon({ name, size = 20 }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
 
+function Dashboard({ user, onLogout }) {
+  return (
+    <div className="dashboard-page">
+      <header className="dashboard-header">
+        <a className="brand" href="/"><span className="brand-mark">L</span><span>LUMI</span></a>
+        <div className="dashboard-account"><span>{user.name}</span><button className="logout-button" onClick={onLogout}>Se déconnecter</button></div>
+      </header>
+      <main className="dashboard-main">
+        <p className="section-label"><span>01</span> Espace personnel</p>
+        <h1>Bonjour,<br /><em>{user.name}.</em></h1>
+        <div className="empty-dashboard">
+          <Icon name="grid" size={30} />
+          <div><h2>Votre dashboard est prêt.</h2><p>Les services et widgets personnalisables arriveront à la prochaine étape.</p></div>
+          <span>0 widget</span>
+        </div>
+      </main>
+    </div>
+  );
+}
+
 function App() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('Prêt pour le premier échange.');
   const [connection, setConnection] = useState('idle');
   const [lastCheck, setLastCheck] = useState(null);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const token = sessionStorage.getItem('lumi_token');
+    if (!token) return;
+    fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
+      .then(response => response.ok ? response.json() : Promise.reject())
+      .then(setUser)
+      .catch(() => sessionStorage.removeItem('lumi_token'));
+  }, []);
+
+  async function handleLogin(event) {
+    event.preventDefault();
+    setAuthLoading(true);
+    setAuthError('');
+    const form = new FormData(event.currentTarget);
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: form.get('email'), password: form.get('password') }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Connexion impossible.');
+      sessionStorage.setItem('lumi_token', data.token);
+      setUser(data.user);
+      setLoginOpen(false);
+    } catch (error) {
+      setAuthError(error.message);
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
+  async function handleLogout() {
+    const token = sessionStorage.getItem('lumi_token');
+    if (token) await fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
+    sessionStorage.removeItem('lumi_token');
+    setUser(null);
+  }
 
   async function testConnection() {
     setLoading(true);
@@ -39,6 +102,8 @@ function App() {
 
   const statusLabel = loading ? 'Connexion…' : connection === 'success' ? 'En ligne' : connection === 'error' ? 'Hors ligne' : 'En attente';
 
+  if (user) return <Dashboard user={user} onLogout={handleLogout} />;
+
   return (
     <div className="site-shell">
       <a className="skip-link" href="#main">Aller au contenu</a>
@@ -49,7 +114,7 @@ function App() {
           <a href="#architecture">Architecture</a>
           <a href="/api/docs" target="_blank" rel="noreferrer">API <Icon name="external" size={13} /></a>
         </nav>
-        <span className="header-status"><span /> Version 0.1</span>
+        <button className="login-trigger" onClick={() => setLoginOpen(true)}>Se connecter</button>
       </header>
 
       <main id="main" tabIndex={-1}>
@@ -123,6 +188,23 @@ function App() {
       </main>
 
       <footer className="site-footer"><div className="footer-brand">LUMI<span>Projet G-WEB-500</span></div><p>Un espace personnel.<br />Une vision plus claire.</p><div className="footer-meta"><a href="/api/docs" target="_blank" rel="noreferrer">Documentation API</a><span>React + Rust</span><span>2026</span></div></footer>
+      {loginOpen && <div className="modal-backdrop" role="presentation" onMouseDown={event => event.target === event.currentTarget && setLoginOpen(false)}>
+        <section className="login-modal" role="dialog" aria-modal="true" aria-labelledby="login-title">
+          <button className="modal-close" onClick={() => setLoginOpen(false)} aria-label="Fermer">×</button>
+          <p className="section-label"><span>01</span> Espace personnel</p>
+          <h2 id="login-title">Bienvenue sur Lumi.</h2>
+          <p>Connectez-vous pour accéder à votre dashboard.</p>
+          <form onSubmit={handleLogin}>
+            <label htmlFor="email">Adresse e-mail</label>
+            <input id="email" name="email" type="email" autoComplete="email" defaultValue="demo@lumi.local" required />
+            <label htmlFor="password">Mot de passe</label>
+            <input id="password" name="password" type="password" autoComplete="current-password" required />
+            {authError && <p className="auth-error" role="alert">{authError}</p>}
+            <button className="button button-dark login-submit" disabled={authLoading}>{authLoading ? 'Connexion…' : 'Accéder au dashboard'}<Icon name="arrow" size={17} /></button>
+          </form>
+          <small>Compte de démonstration : demo@lumi.local · mot de passe : lumi-demo</small>
+        </section>
+      </div>}
     </div>
   );
 }
