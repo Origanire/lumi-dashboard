@@ -79,7 +79,7 @@ function WidgetCard({ widget, onEdit, onRemove, onDragStart, onDragEnd, onResize
       </div>
       <WidgetContent widget={widget} />
       <span className="drag-hint">Glisser pour déplacer</span>
-      <button type="button" className="widget-resize-handle" onPointerDown={event => onResizeStart(event, widget)} aria-label={`Redimensionner ${widget.title}`} title="Redimensionner"><span aria-hidden="true" /></button>
+      <button type="button" className="widget-resize-handle" draggable="false" onDragStart={event => event.preventDefault()} onPointerDown={event => onResizeStart(event, widget)} aria-label={`Redimensionner ${widget.title}`} title="Redimensionner"><span aria-hidden="true" /></button>
     </article>
   );
 }
