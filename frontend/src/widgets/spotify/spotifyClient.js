@@ -16,12 +16,17 @@ const SPOTIFY_AUTH_ENDPOINT = 'https://accounts.spotify.com/authorize';
 const SPOTIFY_TOKEN_ENDPOINT = 'https://accounts.spotify.com/api/token';
 const SPOTIFY_API_BASE = 'https://api.spotify.com/v1';
 
-// Minimum required scopes for currently playing, top tracks, and playlists
+// Minimum required scopes for currently playing, top tracks, playlists, playback control, and save
 export const SPOTIFY_SCOPES = [
   'user-read-currently-playing',
   'user-read-playback-state',
+  'user-modify-playback-state',
   'user-top-read',
+  'user-library-read',
+  'user-library-modify',
   'playlist-read-private',
+  'playlist-modify-private',
+  'playlist-modify-public',
 ];
 
 const STORAGE_KEY_AUTH = 'lumi_spotify_auth';
@@ -457,9 +462,95 @@ export async function getPlaylistItems(playlistId, limit = 10) {
 /**
  * Get detailed profile information about the current user.
  * Endpoint: GET /v1/me
- * Scope: user-read-private user-read-email
  */
 export async function getUserProfile() {
   return spotifyFetch('/me');
 }
 
+/**
+ * Pause playback on the user's account.
+ * Endpoint: PUT /v1/me/player/pause
+ * Scope: user-modify-playback-state
+ */
+export async function pausePlayback() {
+  return spotifyFetch('/me/player/pause', { method: 'PUT' });
+}
+
+/**
+ * Start or resume playback on the user's account.
+ * Endpoint: PUT /v1/me/player/play
+ * Scope: user-modify-playback-state
+ */
+export async function resumePlayback() {
+  return spotifyFetch('/me/player/play', { method: 'PUT' });
+}
+
+/**
+ * Skip to the next track in the user's queue.
+ * Endpoint: POST /v1/me/player/next
+ * Scope: user-modify-playback-state
+ */
+export async function skipToNext() {
+  return spotifyFetch('/me/player/next', { method: 'POST' });
+}
+
+/**
+ * Skip to the previous track in the user's queue.
+ * Endpoint: POST /v1/me/player/previous
+ * Scope: user-modify-playback-state
+ */
+export async function skipToPrevious() {
+  return spotifyFetch('/me/player/previous', { method: 'POST' });
+}
+
+/**
+ * Check if the current user has saved the given tracks to their library.
+ * Endpoint: GET /v1/me/tracks/contains
+ * Scope: user-library-read
+ */
+export async function checkTracksSaved(trackIds) {
+  const ids = Array.isArray(trackIds) ? trackIds.join(',') : trackIds;
+  return spotifyFetch(`/me/tracks/contains?ids=${encodeURIComponent(ids)}`);
+}
+
+/**
+ * Save tracks to the current user's library.
+ * Endpoint: PUT /v1/me/tracks
+ * Scope: user-library-modify
+ */
+export async function saveTracks(trackIds) {
+  const ids = Array.isArray(trackIds) ? trackIds : [trackIds];
+  return spotifyFetch('/me/tracks', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  });
+}
+
+/**
+ * Remove tracks from the current user's library.
+ * Endpoint: DELETE /v1/me/tracks
+ * Scope: user-library-modify
+ */
+export async function removeSavedTracks(trackIds) {
+  const ids = Array.isArray(trackIds) ? trackIds : [trackIds];
+  return spotifyFetch('/me/tracks', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  });
+}
+
+/**
+ * Add items to a playlist.
+ * Endpoint: POST /v1/playlists/{playlist_id}/tracks
+ * Scope: playlist-modify-private, playlist-modify-public
+ */
+export async function addTracksToPlaylist(playlistId, trackUris) {
+  const uris = Array.isArray(trackUris) ? trackUris : [trackUris];
+  return spotifyFetch(`/playlists/${encodeURIComponent(playlistId)}/tracks`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ uris }),
+  });
+}
