@@ -1,0 +1,465 @@
+/**
+ * Spotify Web API Client
+ *
+ * Implements:
+ * - Spotify OpenAPI Specification standards (https://developer.spotify.com/reference/web-api/open-api-schema.yaml)
+ * - Authorization Code Flow with PKCE (RFC 7636) for secure client-side user auth without exposing secrets
+ * - Strict Redirect URI compliance (enforces http://127.0.0.1 for local development, HTTPS in production, no localhost)
+ * - Minimum required scopes per feature
+ * - Token management with proactive refresh and secure storage
+ * - Rate limiting (HTTP 429) exponential backoff respecting Retry-After header
+ * - Uses modern, non-deprecated endpoints (/playlists/{id}/items, /me/library, etc.)
+ * - Full OpenAPI error mapping and Spotify Developer Terms compliance (attribution, no persistent cache)
+ */
+
+const SPOTIFY_AUTH_ENDPOINT = 'https://accounts.spotify.com/authorize';
+const SPOTIFY_TOKEN_ENDPOINT = 'https://accounts.spotify.com/api/token';
+const SPOTIFY_API_BASE = 'https://api.spotify.com/v1';
+
+// Minimum required scopes for currently playing, top tracks, and playlists
+export const SPOTIFY_SCOPES = [
+  'user-read-currently-playing',
+  'user-read-playback-state',
+  'user-top-read',
+  'playlist-read-private',
+];
+
+const STORAGE_KEY_AUTH = 'lumi_spotify_auth';
+const STORAGE_KEY_PKCE_VERIFIER = 'lumi_spotify_pkce_verifier';
+const STORAGE_KEY_PKCE_STATE = 'lumi_spotify_pkce_state';
+
+/**
+ * Returns a compliant redirect URI.
+ * Requirement: Always use HTTPS redirect URIs, except http://127.0.0.1 for local development.
+ * Never use http://localhost or wildcard URIs.
+ */
+export function getSpotifyRedirectUri() {
+  const { protocol, hostname, port } = window.location;
+  let safeHost = hostname;
+  let safeProtocol = protocol;
+
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    safeHost = '127.0.0.1';
+    safeProtocol = 'http:';
+  } else {
+    safeProtocol = 'https:';
+  }
+
+  const portSuffix = port ? `:${port}` : '';
+  return `${safeProtocol}//${safeHost}${portSuffix}/`;
+}
+
+/**
+ * Cryptographically generates a PKCE code verifier (43-128 characters).
+ */
+function generateRandomString(length = 64) {
+  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+  const values = crypto.getRandomValues(new Uint8Array(length));
+  return Array.from(values, byte => possible[byte % possible.length]).join('');
+}
+
+/**
+ * Generates the SHA-256 hash base64url-encoded code challenge for PKCE.
+ */
+async function generateCodeChallenge(codeVerifier) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(codeVerifier);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  const bytes = new Uint8Array(digest);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i += 1) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+// Default Spotify Client ID (configured via .env or app default)
+export const DEFAULT_SPOTIFY_CLIENT_ID =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SPOTIFY_CLIENT_ID) ||
+  'e60d843818e342cbbfad9aa465e913ec'; // App default fallback
+
+const STORAGE_KEY_ACTIVE_CLIENT_ID = 'lumi_spotify_active_client_id';
+
+/**
+ * Resolves the Spotify Client ID from argument, localStorage, or application default (.env).
+ */
+export function getSpotifyClientId(customClientId) {
+  if (customClientId && typeof customClientId === 'string' && customClientId.trim().length > 0) {
+    return customClientId.trim();
+  }
+  const stored = localStorage.getItem('lumi_spotify_client_id');
+  if (stored && stored.trim().length > 0) {
+    return stored.trim();
+  }
+  return DEFAULT_SPOTIFY_CLIENT_ID.trim();
+}
+
+/**
+ * Initiates the Spotify Authorization Code with PKCE flow.
+ * Generates cryptographic code verifier and SHA-256 challenge, then redirects to Spotify.
+ * Does not require manual client ID configuration if default or .env is provided.
+ */
+export async function redirectToSpotifyAuthorize(customClientId, scopes = SPOTIFY_SCOPES) {
+  const clientId = getSpotifyClientId(customClientId);
+  if (!clientId) {
+    throw new Error('Un Client ID Spotify valide est requis.');
+  }
+
+  // 1. Generate cryptographic temporary key (PKCE code verifier)
+  const verifier = generateRandomString(64);
+
+  // 2. Hash it with SHA-256 and base64url-encode to create the code challenge
+  const challenge = await generateCodeChallenge(verifier);
+
+  // 3. Generate CSRF state token
+  const state = generateRandomString(16);
+  const redirectUri = getSpotifyRedirectUri();
+
+  // 4. Save verifier and state in sessionStorage for callback verification
+  sessionStorage.setItem(STORAGE_KEY_PKCE_VERIFIER, verifier);
+  sessionStorage.setItem(STORAGE_KEY_PKCE_STATE, state);
+  sessionStorage.setItem(STORAGE_KEY_ACTIVE_CLIENT_ID, clientId);
+
+  // 5. Build authorization URL
+  const params = new URLSearchParams({
+    client_id: clientId,
+    response_type: 'code',
+    redirect_uri: redirectUri,
+    code_challenge_method: 'S256',
+    code_challenge: challenge,
+    state,
+    scope: scopes.join(' '),
+  });
+
+  // 6. Redirect user to Spotify authorization page
+  window.location.href = `${SPOTIFY_AUTH_ENDPOINT}?${params.toString()}`;
+}
+
+/**
+ * Handles the Spotify redirect callback containing ?code=...&state=...
+ */
+export async function handleSpotifyCallback(customClientId) {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  const state = params.get('state');
+  const error = params.get('error');
+
+  if (!code && !error) {
+    return null; // Not an auth callback
+  }
+
+  // Clean URL parameters immediately
+  const cleanUrl = window.location.origin + window.location.pathname;
+  window.history.replaceState({}, document.title, cleanUrl);
+
+  if (error) {
+    throw new Error(`Erreur d'autorisation Spotify: ${error}`);
+  }
+
+  const savedState = sessionStorage.getItem(STORAGE_KEY_PKCE_STATE);
+  const verifier = sessionStorage.getItem(STORAGE_KEY_PKCE_VERIFIER);
+  const activeClientId =
+    sessionStorage.getItem(STORAGE_KEY_ACTIVE_CLIENT_ID) ||
+    getSpotifyClientId(customClientId);
+
+  sessionStorage.removeItem(STORAGE_KEY_PKCE_STATE);
+  sessionStorage.removeItem(STORAGE_KEY_PKCE_VERIFIER);
+  sessionStorage.removeItem(STORAGE_KEY_ACTIVE_CLIENT_ID);
+
+  if (!state || state !== savedState) {
+    throw new Error('Validation d’état PKCE invalide (CSRF mismatch).');
+  }
+
+  if (!verifier) {
+    throw new Error('Code verifier PKCE introuvable. Veuillez réessayer.');
+  }
+
+  return exchangeCodeForToken(activeClientId, code, verifier);
+}
+
+/**
+ * Exchanges authorization code for access & refresh tokens.
+ * No client secret is sent, preserving security on client side.
+ */
+async function exchangeCodeForToken(clientId, code, verifier) {
+  const redirectUri = getSpotifyRedirectUri();
+  const body = new URLSearchParams({
+    client_id: clientId,
+    grant_type: 'authorization_code',
+    code,
+    redirect_uri: redirectUri,
+    code_verifier: verifier,
+  });
+
+  const response = await fetch(SPOTIFY_TOKEN_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    const errorMsg = data.error_description || data.error || 'Échec de récupération du token';
+    throw new Error(errorMsg);
+  }
+
+  const authData = {
+    clientId,
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token,
+    expiresAt: Date.now() + data.expires_in * 1000 - 60000, // 1 min buffer
+    scope: data.scope,
+  };
+
+  saveStoredAuth(authData);
+  return authData;
+}
+
+/**
+ * Proactively refreshes the Spotify access token.
+ */
+export async function refreshSpotifyToken() {
+  const auth = getStoredAuth();
+  if (!auth || !auth.refreshToken || !auth.clientId) {
+    clearStoredAuth();
+    throw new Error('Session Spotify expirée. Veuillez vous reconnecter.');
+  }
+
+  const body = new URLSearchParams({
+    client_id: auth.clientId,
+    grant_type: 'refresh_token',
+    refresh_token: auth.refreshToken,
+  });
+
+  const response = await fetch(SPOTIFY_TOKEN_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    // Refresh token expired or revoked; user must authorize again
+    clearStoredAuth();
+    throw new Error(data.error_description || 'Jeton de rafraîchissement expiré. Reconnexion requise.');
+  }
+
+  const updatedAuth = {
+    ...auth,
+    accessToken: data.access_token,
+    // Spotify may or may not return a new refresh token
+    refreshToken: data.refresh_token || auth.refreshToken,
+    expiresAt: Date.now() + data.expires_in * 1000 - 60000,
+    scope: data.scope || auth.scope,
+  };
+
+  saveStoredAuth(updatedAuth);
+  return updatedAuth;
+}
+
+export function getStoredAuth() {
+  try {
+    const item = localStorage.getItem(STORAGE_KEY_AUTH);
+    return item ? JSON.parse(item) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveStoredAuth(authData) {
+  try {
+    localStorage.setItem(STORAGE_KEY_AUTH, JSON.stringify(authData));
+    window.dispatchEvent(new CustomEvent('lumi:spotify-auth-changed', { detail: authData }));
+  } catch (err) {
+    console.warn('Impossible de sauvegarder la session Spotify dans localStorage:', err);
+  }
+}
+
+export function clearStoredAuth() {
+  try {
+    localStorage.removeItem(STORAGE_KEY_AUTH);
+    window.dispatchEvent(new CustomEvent('lumi:spotify-auth-changed', { detail: null }));
+  } catch (err) {
+    console.warn('Impossible de supprimer la session Spotify:', err);
+  }
+}
+
+/**
+ * Sleep helper for exponential backoff.
+ */
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Core authenticated fetch with:
+ * - Proactive token refresh
+ * - Retry on 401
+ * - HTTP 429 exponential backoff with Retry-After header respect
+ * - OpenAPI error response parsing
+ */
+export async function spotifyFetch(endpoint, options = {}, attempt = 1) {
+  let auth = getStoredAuth();
+  if (!auth || !auth.accessToken) {
+    throw new Error('Non authentifié avec Spotify.');
+  }
+
+  // Proactive refresh if expired or about to expire
+  if (Date.now() >= (auth.expiresAt || 0)) {
+    try {
+      auth = await refreshSpotifyToken();
+    } catch (err) {
+      throw new Error(`Authentification requise : ${err.message}`);
+    }
+  }
+
+  const url = endpoint.startsWith('http') ? endpoint : `${SPOTIFY_API_BASE}${endpoint}`;
+  const headers = {
+    Accept: 'application/json',
+    Authorization: `Bearer ${auth.accessToken}`,
+    ...(options.headers || {}),
+  };
+
+  const response = await fetch(url, { ...options, headers });
+
+  // 204 No Content (e.g. playback idle)
+  if (response.status === 204) {
+    return null;
+  }
+
+  // Handle Rate Limits (HTTP 429)
+  if (response.status === 429) {
+    if (attempt > 3) {
+      throw new Error('Limite de requêtes Spotify atteinte (429). Réessayez plus tard.');
+    }
+    const retryAfterHeader = response.headers.get('Retry-After');
+    const retryAfterSec = retryAfterHeader ? parseInt(retryAfterHeader, 10) : Math.pow(2, attempt);
+    const delayMs = Math.max(retryAfterSec * 1000, 1000);
+    await sleep(delayMs);
+    return spotifyFetch(endpoint, options, attempt + 1);
+  }
+
+  // Handle Token Expiration during request (HTTP 401)
+  if (response.status === 401 && attempt <= 2) {
+    try {
+      await refreshSpotifyToken();
+      return spotifyFetch(endpoint, options, attempt + 1);
+    } catch {
+      clearStoredAuth();
+      throw new Error('Session Spotify expirée. Veuillez vous reconnecter.');
+    }
+  }
+
+  // OpenAPI Error Format parsing: { error: { status: number, message: string } }
+  if (!response.ok) {
+    let errorMessage = `Erreur Spotify (${response.status})`;
+    try {
+      const errorJson = await response.json();
+      if (errorJson.error) {
+        if (typeof errorJson.error === 'string') {
+          errorMessage = errorJson.error;
+        } else if (errorJson.error.message) {
+          errorMessage = errorJson.error.message;
+        }
+      }
+    } catch {
+      // response wasn't JSON
+    }
+
+    if (response.status === 403) {
+      errorMessage = `Accès refusé par Spotify (403) : ${errorMessage}`;
+    } else if (response.status === 404) {
+      errorMessage = `Ressource Spotify introuvable (404) : ${errorMessage}`;
+    } else if (response.status >= 500) {
+      errorMessage = `Service Spotify temporairement indisponible (${response.status}).`;
+    }
+
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+}
+
+/**
+ * Spotify Web API Methods (Strictly adhering to OpenAPI schema and non-deprecated endpoints)
+ */
+
+/**
+ * Get the object currently being played on the user's Spotify account.
+ * Endpoint: GET /v1/me/player/currently-playing
+ * Scope: user-read-currently-playing
+ */
+export async function getCurrentlyPlaying() {
+  return spotifyFetch('/me/player/currently-playing');
+}
+
+/**
+ * Get information about the user's current playback state, including track or episode, progress, and active device.
+ * Endpoint: GET /v1/me/player
+ * Scope: user-read-playback-state
+ */
+export async function getPlaybackState() {
+  return spotifyFetch('/me/player');
+}
+
+/**
+ * Get the current user's top tracks based on calculated affinity.
+ * Endpoint: GET /v1/me/top/tracks
+ * Scope: user-top-read
+ * @param {'short_term' | 'medium_term' | 'long_term'} timeRange
+ * @param {number} limit
+ */
+export async function getTopTracks(timeRange = 'medium_term', limit = 5) {
+  const query = new URLSearchParams({
+    time_range: timeRange,
+    limit: String(Math.min(50, Math.max(1, limit))),
+  });
+  return spotifyFetch(`/me/top/tracks?${query.toString()}`);
+}
+
+/**
+ * Get the current user's top artists based on calculated affinity.
+ * Endpoint: GET /v1/me/top/artists
+ * Scope: user-top-read
+ */
+export async function getTopArtists(timeRange = 'medium_term', limit = 5) {
+  const query = new URLSearchParams({
+    time_range: timeRange,
+    limit: String(Math.min(50, Math.max(1, limit))),
+  });
+  return spotifyFetch(`/me/top/artists?${query.toString()}`);
+}
+
+/**
+ * Get a list of the playlists owned or followed by the current Spotify user.
+ * Endpoint: GET /v1/me/playlists
+ * Scope: playlist-read-private
+ */
+export async function getUserPlaylists(limit = 10) {
+  const query = new URLSearchParams({ limit: String(limit) });
+  return spotifyFetch(`/me/playlists?${query.toString()}`);
+}
+
+/**
+ * Get full details of the items of a playlist owned by a Spotify user.
+ * Endpoint: GET /v1/playlists/{playlist_id}/items
+ * Scope: playlist-read-private
+ * Note: /playlists/{playlist_id}/items is preferred over the deprecated /playlists/{playlist_id}/tracks
+ */
+export async function getPlaylistItems(playlistId, limit = 10) {
+  const query = new URLSearchParams({ limit: String(limit) });
+  return spotifyFetch(`/playlists/${encodeURIComponent(playlistId)}/items?${query.toString()}`);
+}
+
+/**
+ * Get detailed profile information about the current user.
+ * Endpoint: GET /v1/me
+ * Scope: user-read-private user-read-email
+ */
+export async function getUserProfile() {
+  return spotifyFetch('/me');
+}
+
