@@ -14,6 +14,21 @@ const INITIAL_WIDGETS = [
   { id: 4, type: 'notes', title: 'Notes rapides', x: 7, y: 2, width: 6, height: 1, content: 'Idées à noter pour la prochaine session.' },
 ];
 
+const WIDGET_CONFIG_KEYS = {
+  weather: ['type', 'title', 'city'],
+  agenda: ['type', 'title', 'nextEvent', 'time', 'detail'],
+  focus: ['type', 'title', 'duration'],
+  notes: ['type', 'title', 'content'],
+};
+
+function widgetConfigKey(widget) {
+  return JSON.stringify(WIDGET_CONFIG_KEYS[widget.type].reduce((config, key) => {
+    const value = widget[key];
+    config[key] = typeof value === 'string' ? value.trim() : value ?? '';
+    return config;
+  }, {}));
+}
+
 function widgetsOverlap(first, second) {
   return first.x < second.x + second.width && first.x + first.width > second.x && first.y < second.y + second.height && first.y + first.height > second.y;
 }
@@ -86,12 +101,17 @@ function WidgetCard({ widget, onEdit, onRemove, onDragStart, onDragEnd, onResize
 
 function WidgetEditor({ widget, mode, onClose, onSave }) {
   const [draft, setDraft] = useState(widget || { type: 'weather', title: 'Météo', city: 'Paris', x: 1, y: 3, width: 4, height: 1 });
+  const [error, setError] = useState('');
   const type = WIDGET_TYPES[draft.type];
-  const update = (key, value) => setDraft(current => ({ ...current, [key]: value }));
+  const update = (key, value) => {
+    setDraft(current => ({ ...current, [key]: value }));
+    setError('');
+  };
 
   function submit(event) {
     event.preventDefault();
-    onSave({ ...draft, title: draft.title.trim() || type.label });
+    const saved = onSave({ ...draft, title: draft.title.trim() || type.label });
+    if (!saved) setError('Un widget avec exactement ces paramètres existe déjà.');
   }
 
   return <div className="modal-backdrop widget-modal-backdrop" role="presentation" onMouseDown={event => event.target === event.currentTarget && onClose()}>
@@ -108,6 +128,7 @@ function WidgetEditor({ widget, mode, onClose, onSave }) {
         {draft.type === 'focus' && <><label htmlFor="widget-duration">Durée d’une session (minutes)</label><input id="widget-duration" type="number" min="5" max="120" value={draft.duration} onChange={event => update('duration', Number(event.target.value))} /></>}
         <div className="widget-size-fields"><div><label htmlFor="widget-width">Largeur · cases</label><input id="widget-width" type="number" min="1" max="12" value={draft.width} onChange={event => update('width', Number(event.target.value))} /></div><div><label htmlFor="widget-height">Hauteur · lignes</label><input id="widget-height" type="number" min="1" max="6" value={draft.height} onChange={event => update('height', Number(event.target.value))} /></div></div>
         <div className="widget-size-fields"><div><label htmlFor="widget-x">Position horizontale</label><input id="widget-x" type="number" min="1" max="12" value={draft.x} onChange={event => update('x', Number(event.target.value))} /></div><div><label htmlFor="widget-y">Position verticale</label><input id="widget-y" type="number" min="1" max="12" value={draft.y} onChange={event => update('y', Number(event.target.value))} /></div></div>
+        {error && <p className="widget-editor-error" role="alert">{error}</p>}
         <button className="button button-dark widget-save" type="submit">{mode === 'add' ? 'Ajouter au dashboard' : 'Enregistrer les changements'} <span aria-hidden="true">→</span></button>
       </form>
     </section>
@@ -157,11 +178,14 @@ export default function WidgetDashboard() {
     const x = Math.min(13 - width, Math.max(1, Number(widget.x) || 1));
     const y = Math.max(1, Number(widget.y) || 1);
     const nextWidget = { ...widget, x, y, width, height };
+    const duplicate = widgets.some(item => item.id !== widget.id && widgetConfigKey(item) === widgetConfigKey(nextWidget));
+    if (duplicate) return false;
     if (editor.mode === 'add') {
       const addedWidget = { ...nextWidget, id: Date.now() };
       setWidgets(current => resolveLayout([...current, addedWidget], addedWidget.id));
     } else setWidgets(current => resolveLayout(current.map(item => item.id === widget.id ? nextWidget : item), widget.id));
     setEditor(null);
+    return true;
   }
 
   function moveWidget(event) {
