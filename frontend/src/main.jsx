@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import WidgetDashboard from './WidgetDashboard';
 import './style.css';
 
 function Icon({ name, size = 20 }) {
@@ -22,11 +23,7 @@ function Dashboard({ user, onLogout }) {
       <main className="dashboard-main">
         <p className="section-label"><span>01</span> Espace personnel</p>
         <h1>Bonjour,<br /><em>{user.name}.</em></h1>
-        <div className="empty-dashboard">
-          <Icon name="grid" size={30} />
-          <div><h2>Votre dashboard est prêt.</h2><p>Les services et widgets personnalisables arriveront à la prochaine étape.</p></div>
-          <span>0 widget</span>
-        </div>
+        <WidgetDashboard />
       </main>
     </div>
   );
