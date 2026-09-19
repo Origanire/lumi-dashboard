@@ -98,6 +98,12 @@ async fn register_login_and_persistent_sessions_for_each_public_role(pool: PgPoo
             .unwrap();
         assert_ne!(hash, "test-password");
         assert!(bcrypt::verify("test-password", &hash).unwrap());
+        // This suite isolates account/session behavior; email proof is tested in email_auth.rs.
+        sqlx::query("UPDATE users SET email_verified_at=now() WHERE email=$1")
+            .bind(format!("{role}@test.local"))
+            .execute(&pool)
+            .await
+            .unwrap();
         let login = login(&app, role).await;
         assert_eq!(login["user"]["role"], role);
         assert_eq!(login["user"]["roles"], json!([role]));
@@ -176,6 +182,10 @@ async fn roles_are_checked_and_revocation_invalidates_sessions(pool: PgPool) {
         .0,
         StatusCode::UNPROCESSABLE_ENTITY
     );
+    sqlx::query("UPDATE users SET email_verified_at=now()")
+        .execute(&pool)
+        .await
+        .unwrap();
     let personal = login(&app, "perso").await;
     let id: Uuid = sqlx::query_scalar("SELECT id FROM users")
         .fetch_one(&pool)
@@ -303,6 +313,10 @@ async fn demo_bootstrap_is_idempotent(pool: PgPool) {
     .await
     .unwrap();
     lumi_backend::auth::seed_demo(&pool, lumi_backend::DEMO_EMAIL, "wrong")
+        .await
+        .unwrap();
+    sqlx::query("UPDATE users SET email_verified_at=now()")
+        .execute(&pool)
         .await
         .unwrap();
     let app = lumi_backend::app(pool);
