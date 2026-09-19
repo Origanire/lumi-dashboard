@@ -1,237 +1,731 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import WidgetDashboard from './WidgetDashboard';
+import Dialog from './components/Dialog';
 import './style.css';
+
+const ROLE_LABELS = {
+  perso: 'Personnel',
+  employe: 'Employé',
+  entreprise: 'Entreprise',
+  admin: 'Administrateur',
+};
+const ROLE_DESCRIPTIONS = {
+  perso: 'Pour organiser votre quotidien.',
+  employe: 'Pour votre journée de travail.',
+  entreprise: 'Pour créer votre espace professionnel.',
+};
 
 function Icon({ name, size = 20 }) {
   const paths = {
-    arrow: <><path d="M5 12h14M14 7l5 5-5 5" /></>,
-    external: <><path d="M7 17 17 7M7 7h10v10" /></>,
-    pulse: <path d="M2 12h5l3-7 4 14 3-7h5" />,
-    grid: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></>,
+    arrow: <path d="M5 12h14m-5-5 5 5-5 5" />,
+    grid: (
+      <>
+        <rect x="3" y="3" width="7" height="7" rx="1.5" />
+        <rect x="14" y="3" width="7" height="7" rx="1.5" />
+        <rect x="3" y="14" width="7" height="7" rx="1.5" />
+        <rect x="14" y="14" width="7" height="7" rx="1.5" />
+      </>
+    ),
+    user: (
+      <>
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4 21v-2a8 8 0 0 1 16 0v2" />
+      </>
+    ),
+    logout: (
+      <>
+        <path d="M9 4H4v16h5m4-8h8m-4-4 4 4-4 4" />
+      </>
+    ),
+    sun: (
+      <>
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 1v2m0 18v2M1 12h2m18 0h2M4 4l2 2m12 12 2 2M4 20l2-2M18 6l2-2" />
+      </>
+    ),
   };
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {paths[name]}
+    </svg>
+  );
+}
+function Brand() {
+  return (
+    <a className="brand" href="/" aria-label="Lumi, accueil">
+      LUMI<span className="brand-dot">.</span>
+    </a>
+  );
 }
 
-const ROLE_LABELS = { perso: 'Personnel', employe: 'Employé', entreprise: 'Entreprise', admin: 'Administrateur' };
+function ThemeToggle() {
+  const [dark, setDark] = useState(
+    document.documentElement.dataset.theme === 'dark',
+  );
+  useEffect(() => {
+    const sync = () =>
+      setDark(document.documentElement.dataset.theme === 'dark');
+    const observer = new MutationObserver(sync);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+    return () => observer.disconnect();
+  }, []);
+  function toggle() {
+    const next = dark ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    setDark(next === 'dark');
+    try {
+      localStorage.setItem('lumi_theme', next);
+    } catch {
+      /* The theme still works for this page. */
+    }
+  }
+  return (
+    <button
+      type="button"
+      className="theme-toggle"
+      aria-label="Mode nuit"
+      aria-pressed={dark}
+      onClick={toggle}
+      title={dark ? 'Passer en mode jour' : 'Passer en mode nuit'}
+    >
+      {dark ? (
+        <Icon name="sun" size={17} />
+      ) : (
+        <svg
+          width="17"
+          height="17"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          aria-hidden="true"
+        >
+          <path d="M20 15.5A8.5 8.5 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5Z" />
+        </svg>
+      )}
+      <span>{dark ? 'Nuit' : 'Jour'}</span>
+    </button>
+  );
+}
+
+async function api(path, { body, ...options } = {}) {
+  const token = sessionStorage.getItem('lumi_token');
+  let response;
+  try {
+    response = await fetch(`/api${path}`, {
+      ...options,
+      signal: AbortSignal.timeout(10000),
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+  } catch {
+    throw new Error(
+      'Connexion au serveur impossible. Réessayez dans un instant.',
+    );
+  }
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(
+      data.message || 'Le serveur ne peut pas traiter cette demande.',
+    );
+    error.status = response.status;
+    throw error;
+  }
+  return data;
+}
+
+function AuthDialog({ initialMode, onClose, onLogin }) {
+  const [mode, setMode] = useState(initialMode);
+  const [role, setRole] = useState('perso');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [visible, setVisible] = useState(false);
+  const register = mode === 'register';
+  async function submit(event) {
+    event.preventDefault();
+    setBusy(true);
+    setError('');
+    setNotice('');
+    const form = new FormData(event.currentTarget);
+    const payload = {
+      email: form.get('email'),
+      password: form.get('password'),
+    };
+    if (register) {
+      payload.name = form.get('name');
+      payload.role = role;
+      if (role === 'entreprise')
+        payload.company_name = form.get('company_name');
+    }
+    try {
+      const data = await api(register ? '/auth/register' : '/auth/login', {
+        method: 'POST',
+        body: payload,
+      });
+      if (register) {
+        setMode('login');
+        setVisible(false);
+        setNotice(
+          'Votre compte est créé. Connectez-vous pour ouvrir votre espace.',
+        );
+      } else {
+        sessionStorage.setItem('lumi_token', data.token);
+        onLogin(data.user);
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Dialog
+      titleId="auth-title"
+      onClose={() => {
+        if (!busy) onClose();
+      }}
+      className="auth-dialog"
+    >
+      <span className="eyebrow">Bienvenue chez Lumi</span>
+      <h2 id="auth-title">
+        {register ? 'Un espace à vous.' : 'Heureux de vous revoir.'}
+      </h2>
+      <p className="muted">
+        {register
+          ? 'Quelques informations pour commencer.'
+          : 'Retrouvez votre tableau de bord et vos repères.'}
+      </p>
+      <form onSubmit={submit} className="auth-form" aria-busy={busy}>
+        <fieldset disabled={busy}>
+          {register && (
+            <>
+              <label htmlFor="name">Votre nom</label>
+              <input
+                id="name"
+                name="name"
+                autoComplete="name"
+                maxLength="100"
+                required
+              />
+              <label htmlFor="role">Type de compte</label>
+              <select
+                id="role"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+              >
+                {Object.keys(ROLE_DESCRIPTIONS).map((r) => (
+                  <option value={r} key={r}>
+                    {ROLE_LABELS[r]}
+                  </option>
+                ))}
+              </select>
+              <p className="field-hint">{ROLE_DESCRIPTIONS[role]}</p>
+              {role === 'entreprise' && (
+                <>
+                  <label htmlFor="company">Nom de l’entreprise</label>
+                  <input
+                    id="company"
+                    name="company_name"
+                    autoComplete="organization"
+                    maxLength="150"
+                    required
+                  />
+                </>
+              )}
+            </>
+          )}
+          <label htmlFor="email">Adresse e-mail</label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            placeholder="vous@exemple.fr"
+            maxLength="254"
+            required
+          />
+          <label htmlFor="password">Mot de passe</label>
+          <div className="password-field">
+            <input
+              id="password"
+              name="password"
+              type={visible ? 'text' : 'password'}
+              autoComplete={register ? 'new-password' : 'current-password'}
+              minLength={register ? 8 : undefined}
+              required
+            />
+            <button
+              type="button"
+              aria-pressed={visible}
+              onClick={() => setVisible(!visible)}
+            >
+              {visible ? 'Masquer' : 'Afficher'}
+            </button>
+          </div>
+          {register && <p className="field-hint">8 caractères minimum.</p>}
+          {error && (
+            <p className="feedback error" role="alert">
+              {error}
+            </p>
+          )}
+          {notice && (
+            <p className="feedback success" role="status">
+              {notice}
+            </p>
+          )}
+          <button className="button button-dark auth-submit" disabled={busy}>
+            {busy
+              ? 'Un instant…'
+              : register
+                ? 'Créer mon compte'
+                : 'Se connecter'}
+            <Icon name="arrow" size={18} />
+          </button>
+        </fieldset>
+      </form>
+      <p className="auth-switch">
+        {register ? 'Déjà un compte ?' : 'Nouveau sur Lumi ?'}{' '}
+        <button
+          className="text-button"
+          disabled={busy}
+          onClick={() => {
+            setMode(register ? 'login' : 'register');
+            setError('');
+            setNotice('');
+          }}
+        >
+          {register ? 'Se connecter' : 'Créer un compte'}
+        </button>
+      </p>
+    </Dialog>
+  );
+}
+
+function Landing({ onOpen }) {
+  const [preview, setPreview] = useState('notes');
+  const previews = {
+    notes: [
+      '01 / Poser ses idées',
+      'Moins d’onglets.\nPlus de place pour penser.',
+      'Une note, un rendez-vous, une pause. Chaque chose trouve sa place.',
+    ],
+    focus: [
+      '02 / Prendre son temps',
+      '25 minutes.\nUne seule chose à la fois.',
+      'Lancez un temps de concentration et avancez à votre rythme.',
+    ],
+    agenda: [
+      '03 / Voir sa journée',
+      'Le prochain rendez-vous,\nsans le chercher.',
+      'Gardez vos repères du jour juste à côté de vos notes.',
+    ],
+  };
+  return (
+    <div className="site-shell">
+      <header className="site-header">
+        <Brand />
+        <nav aria-label="Navigation principale">
+          <a href="#apercu">L’espace Lumi</a>
+          <ThemeToggle />
+          <button className="text-button" onClick={() => onOpen('login')}>
+            Se connecter
+          </button>
+          <button
+            className="button button-dark"
+            onClick={() => onOpen('register')}
+          >
+            Créer un compte <Icon name="arrow" size={16} />
+          </button>
+        </nav>
+      </header>
+      <main id="main">
+        <section className="landing-hero">
+          <div className="hero-copy">
+            <span className="eyebrow">
+              <i className="status-dot" /> Votre quotidien, à portée de main
+            </span>
+            <h1>
+              Votre quotidien.
+              <br />
+              <em>Sous contrôle.</em>
+            </h1>
+            <p>
+              Vos idées, vos rendez-vous et un peu de musique.
+              <br className="desktop-break" /> Un espace calme pour organiser
+              vos journées.
+            </p>
+            <div className="hero-actions">
+              <button
+                className="button button-dark"
+                onClick={() => onOpen('register')}
+              >
+                Composer mon espace <Icon name="arrow" size={18} />
+              </button>
+              <a className="text-link" href="#apercu">
+                Jeter un œil ↓
+              </a>
+            </div>
+            <span className="hero-footnote">
+              Personnel ou professionnel. Toujours à votre façon.
+            </span>
+          </div>
+          <div
+            className="product-preview"
+            aria-label="Aperçu du tableau de bord"
+          >
+            <div className="preview-bar">
+              <span className="preview-logo">lumi.</span>
+              <span>
+                Mon espace <span aria-hidden="true">↗</span>
+              </span>
+            </div>
+            <div className="preview-heading">
+              <small>UN PEU DE CLARTÉ</small>
+              <strong>
+                Une belle journée
+                <br />
+                commence ici.
+              </strong>
+              <span className="preview-sun">
+                <Icon name="sun" size={38} />
+              </span>
+            </div>
+            <div className="preview-grid">
+              <div className="preview-note">
+                <span>↗ &nbsp; CARNET</span>
+                <p>
+                  Une idée à garder.
+                  <br />
+                  Un projet à lancer.
+                  <br />
+                  <em>À vous de jouer.</em>
+                </p>
+                <i />
+              </div>
+              <div className="preview-focus">
+                <span>UN MOMENT POUR SOI</span>
+                <strong>
+                  25<span>:00</span>
+                </strong>
+                <span className="preview-start">▶ &nbsp; Se concentrer</span>
+              </div>
+              <div className="preview-agenda">
+                <span className="preview-time">14:30</span>
+                <div>
+                  <strong>Faire le point</strong>
+                  <small>Prendre du recul, puis avancer.</small>
+                </div>
+                <span>↗</span>
+              </div>
+            </div>
+            <div className="preview-bottom">
+              <span>Votre espace, vos repères.</span>
+              <span>01 — 03</span>
+            </div>
+          </div>
+        </section>
+        <section id="apercu" className="feature-section">
+          <div>
+            <span className="eyebrow">À chacun son organisation</span>
+            <h2>
+              Un bureau qui
+              <br />
+              vous ressemble.
+            </h2>
+            <p>
+              Ajoutez ce qui vous aide. Déplacez ce qui vous gêne. Gardez le
+              reste pour plus tard.
+            </p>
+            <div
+              className="feature-tabs"
+              role="tablist"
+              aria-label="Découvrir les widgets"
+            >
+              {[
+                ['notes', 'Notes'],
+                ['focus', 'Focus'],
+                ['agenda', 'Agenda'],
+              ].map(([key, label], index, tabs) => (
+                <button
+                  key={key}
+                  id={`tab-${key}`}
+                  role="tab"
+                  aria-selected={preview === key}
+                  aria-controls="feature-panel"
+                  tabIndex={preview === key ? 0 : -1}
+                  onClick={() => setPreview(key)}
+                  onKeyDown={(e) => {
+                    if (
+                      ['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(e.key)
+                    ) {
+                      e.preventDefault();
+                      const next =
+                        e.key === 'Home'
+                          ? 0
+                          : e.key === 'End'
+                            ? tabs.length - 1
+                            : (index +
+                                (e.key === 'ArrowRight' ? 1 : -1) +
+                                tabs.length) %
+                              tabs.length;
+                      setPreview(tabs[next][0]);
+                      document.getElementById(`tab-${tabs[next][0]}`).focus();
+                    }
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div
+            id="feature-panel"
+            className={`feature-panel feature-${preview}`}
+            role="tabpanel"
+            aria-labelledby={`tab-${preview}`}
+          >
+            <span className="eyebrow">{previews[preview][0]}</span>
+            <h3>{previews[preview][1]}</h3>
+            <p>{previews[preview][2]}</p>
+            <button className="text-button" onClick={() => onOpen('register')}>
+              Essayer dans mon espace <Icon name="arrow" size={18} />
+            </button>
+          </div>
+        </section>
+      </main>
+      <footer className="site-footer">
+        <Brand />
+        <span>Un peu de clarté dans votre journée.</span>
+        <a href="/api/docs" target="_blank" rel="noreferrer">
+          Documentation API ↗
+        </a>
+      </footer>
+    </div>
+  );
+}
 
 function Dashboard({ user, onLogout }) {
+  const [view, setView] = useState('dashboard');
+  const [logoutBusy, setLogoutBusy] = useState(false);
+  const date = new Intl.DateTimeFormat('fr-FR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  }).format(new Date());
+  const initials = user.name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((s) => s[0])
+    .join('')
+    .toUpperCase();
   return (
-    <div className="dashboard-page">
-      <header className="dashboard-header">
-        <a className="brand" href="/"><span className="brand-mark">LU</span><span>LUMI</span></a>
-        <div className="dashboard-account"><span>{user.name}</span><button className="logout-button" onClick={onLogout}>Se déconnecter</button></div>
+    <div className="workspace-shell">
+      <header className="workspace-nav">
+        <Brand />
+
+        <nav aria-label="Espace de travail">
+          <button
+            className={view === 'dashboard' ? 'active' : ''}
+            aria-current={view === 'dashboard' ? 'page' : undefined}
+            onClick={() => setView('dashboard')}
+          >
+            <Icon name="grid" />
+            Tableau de bord
+          </button>
+          <button
+            className={view === 'account' ? 'active' : ''}
+            aria-current={view === 'account' ? 'page' : undefined}
+            onClick={() => setView('account')}
+          >
+            <Icon name="user" />
+            Mon compte
+          </button>
+        </nav>
+        <div className="workspace-user-actions">
+          <ThemeToggle />
+          <div className="workspace-account">
+            <span className="avatar">{initials}</span>
+            <div>
+              <strong>{user.name}</strong>
+              <small>{ROLE_LABELS[user.role]}</small>
+            </div>
+            <button
+              className="icon-button"
+              aria-label="Se déconnecter"
+              title="Se déconnecter"
+              disabled={logoutBusy}
+              onClick={async () => {
+                setLogoutBusy(true);
+                try {
+                  await onLogout();
+                } finally {
+                  setLogoutBusy(false);
+                }
+              }}
+            >
+              <Icon name="logout" size={18} />
+            </button>
+          </div>
+        </div>
       </header>
-      <main className="dashboard-main">
-        <p className="section-label"><span>01</span> Espace {ROLE_LABELS[user.role] || user.role}</p>
-        <h1>Bonjour,<br /><em>{user.name}.</em></h1>
-        <p>Connecté en tant que {ROLE_LABELS[user.role] || user.role}.</p>
-        {user.companies?.map(company => <p key={company.id}>{company.name}</p>)}
-      </main>
+      <div className="workspace-body">
+        <main id="main" className="dashboard-main">
+          <div hidden={view !== 'dashboard'}>
+            <div className="dashboard-intro">
+              <div>
+                <p className="eyebrow">{date}</p>
+                <h1>
+                  Bonjour, {user.name.split(' ')[0]}
+                  <span className="brand-dot">.</span>
+                </h1>
+                <p className="muted">
+                  {user.role === 'entreprise'
+                    ? `${user.companies[0]?.name || 'Votre entreprise'} — vos repères pour la journée.`
+                    : 'Prenez un instant. Votre journée commence ici.'}
+                </p>
+              </div>
+              <span className="greeting-symbol" aria-hidden="true" />
+            </div>
+            <WidgetDashboard key={user.id} userId={user.id} />
+          </div>
+          {view === 'account' && (
+            <section className="account-page">
+              <span className="eyebrow">Vos informations</span>
+              <h1>
+                Mon compte<span className="brand-dot">.</span>
+              </h1>
+              <p className="muted">
+                Les informations associées à votre espace Lumi.
+              </p>
+              <div className="account-card">
+                <span className="avatar large">{initials}</span>
+                <dl>
+                  <div>
+                    <dt>Nom</dt>
+                    <dd>{user.name}</dd>
+                  </div>
+                  <div>
+                    <dt>Adresse e-mail</dt>
+                    <dd>{user.email}</dd>
+                  </div>
+                  <div>
+                    <dt>Rôles attribués</dt>
+                    <dd>{user.roles.map((r) => ROLE_LABELS[r]).join(', ')}</dd>
+                  </div>
+                  {user.companies.length > 0 && (
+                    <div>
+                      <dt>Entreprise</dt>
+                      <dd>{user.companies.map((c) => c.name).join(', ')}</dd>
+                    </div>
+                  )}
+                </dl>
+              </div>
+              <p className="field-hint">
+                Le type de compte est défini à la création. Les droits sont
+                vérifiés par le serveur.
+              </p>
+            </section>
+          )}
+        </main>
+      </div>
     </div>
   );
 }
 
 function App() {
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('Prêt pour le premier échange.');
-  const [connection, setConnection] = useState('idle');
-  const [lastCheck, setLastCheck] = useState(null);
-  const [loginOpen, setLoginOpen] = useState(false);
-  const [authLoading, setAuthLoading] = useState(false);
-  const [authError, setAuthError] = useState('');
-  const [registerMode, setRegisterMode] = useState(false);
-  const [selectedRole, setSelectedRole] = useState('perso');
-  const [authNotice, setAuthNotice] = useState('');
   const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    const token = sessionStorage.getItem('lumi_token');
-    if (!token) return;
-    fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
-      .then(response => response.ok ? response.json() : Promise.reject())
-      .then(setUser)
-      .catch(() => sessionStorage.removeItem('lumi_token'));
-  }, []);
-
-  async function handleLogin(event) {
-    event.preventDefault();
-    setAuthLoading(true);
-    setAuthError('');
-    setAuthNotice('');
-    const form = new FormData(event.currentTarget);
+  const [authMode, setAuthMode] = useState(null);
+  const [restoring, setRestoring] = useState(
+    !!sessionStorage.getItem('lumi_token'),
+  );
+  const [sessionError, setSessionError] = useState('');
+  async function restore() {
+    setRestoring(true);
+    setSessionError('');
     try {
-      const payload = { email: form.get('email'), password: form.get('password'), role: selectedRole };
-      if (registerMode) {
-        payload.name = form.get('name');
-        if (selectedRole === 'entreprise') payload.company_name = form.get('company_name');
-      }
-      const response = await fetch(registerMode ? '/api/auth/register' : '/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.message || 'Vérifiez les informations saisies.');
-      if (registerMode) {
-        setRegisterMode(false);
-        setAuthNotice(data.message);
+      setUser(await api('/auth/me'));
+    } catch (err) {
+      if (err.status === 401) sessionStorage.removeItem('lumi_token');
+      else setSessionError(err.message);
+    } finally {
+      setRestoring(false);
+    }
+  }
+  useEffect(() => {
+    if (sessionStorage.getItem('lumi_token')) restore();
+  }, []);
+  async function logout() {
+    try {
+      await api('/auth/logout', { method: 'POST' });
+    } catch (err) {
+      if (err.status !== 401) {
+        setSessionError(err.message);
         return;
       }
-      sessionStorage.setItem('lumi_token', data.token);
-      setUser(data.user);
-      setLoginOpen(false);
-    } catch (error) {
-      setAuthError(error.message);
-    } finally {
-      setAuthLoading(false);
     }
-  }
-
-  async function handleLogout() {
-    const token = sessionStorage.getItem('lumi_token');
-    if (token) await fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
     sessionStorage.removeItem('lumi_token');
     setUser(null);
+    setSessionError('');
   }
-
-  async function testConnection() {
-    setLoading(true);
-    setMessage('Connexion au serveur Rust…');
-    try {
-      const response = await fetch('/api/health', { signal: AbortSignal.timeout(5000) });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
-      if (data.status !== 'ok' || typeof data.message !== 'string') throw new Error('Réponse inattendue');
-      setConnection('success');
-      setMessage(data.message);
-    } catch {
-      setConnection('error');
-      setMessage('Le serveur ne répond pas. Vérifie que le backend est lancé.');
-    } finally {
-      setLastCheck(new Date().toLocaleTimeString('fr-FR'));
-      setLoading(false);
-    }
-  }
-
-  const statusLabel = loading ? 'Connexion…' : connection === 'success' ? 'En ligne' : connection === 'error' ? 'Hors ligne' : 'En attente';
-
-  if (user) return <Dashboard user={user} onLogout={handleLogout} />;
-
+  if (restoring)
+    return (
+      <div className="loading-screen" role="status">
+        <Brand />
+        <p>Ouverture de votre espace…</p>
+      </div>
+    );
   return (
-    <div className="site-shell">
-      <a className="skip-link" href="#main">Aller au contenu</a>
-      <header className="site-header">
-        <a className="brand" href="/" aria-label="Lumi, accueil"><span className="brand-mark">LU</span><span>LUMI</span></a>
-        <nav aria-label="Navigation principale">
-          <a href="#connection">Connexion</a>
-          <a href="#architecture">Architecture</a>
-          <a href="/api/docs" target="_blank" rel="noreferrer">API <Icon name="external" size={13} /></a>
-        </nav>
-        <button className="login-trigger" onClick={() => setLoginOpen(true)}>Se connecter</button>
-      </header>
-
-      <main id="main" tabIndex={-1}>
-        <section className="hero">
-          <div className="hero-copy reveal">
-            <p className="section-label"><span>01</span> Votre espace numérique</p>
-            <h1>Tout ce qui compte.<br /><em>Enfin réuni.</em></h1>
-            <p className="hero-intro">Un dashboard personnel conçu pour rassembler vos services, organiser vos informations et garder l’essentiel à portée de regard.</p>
-            <div className="hero-actions">
-              <a className="button button-dark" href="#connection">Découvrir le projet <Icon name="arrow" size={17} /></a>
-              <a className="text-link" href="/api/docs" target="_blank" rel="noreferrer">Explorer l’API</a>
-            </div>
-          </div>
-          <div className="hero-visual reveal" aria-label="Aperçu abstrait du dashboard">
-            <div className="visual-top"><span>APERÇU / 01</span><span className="live-dot">LIVE</span></div>
-            <div className="orbital-display">
-              <span className="orbit orbit-one" /><span className="orbit orbit-two" />
-              <div className="visual-core"><Icon name="grid" size={28} /><span>Votre espace</span></div>
-              <span className="satellite satellite-one">01</span><span className="satellite satellite-two">02</span><span className="satellite satellite-three">03</span>
-            </div>
-            <div className="visual-footer"><span>Services connectés</span><strong>React / Rust</strong></div>
-          </div>
-        </section>
-
-        <section className="statement" aria-label="Vision du produit">
-          <p>Simple à comprendre.</p><p>Personnel par nature.</p><p>Construit pour évoluer.</p>
-        </section>
-
-        <section className="connection-section" id="connection">
-          <div className="section-intro">
-            <p className="section-label"><span>02</span> Première fondation</p>
-            <h2>Deux technologies.<br />Une seule expérience.</h2>
-            <p>L’interface React et l’API Rust communiquent sans exposer la complexité technique à l’utilisateur.</p>
-          </div>
-          <div className={`connection-demo ${connection}`}>
-            <div className="demo-header"><span>Test de connexion</span><span className="connection-status"><i />{statusLabel}</span></div>
-            <div className="technology-pair">
-              <div><span className="technology-number">01</span><strong>Interface</strong><small>React · JavaScript</small></div>
-              <div className="exchange" aria-hidden="true"><span /><Icon name="arrow" size={18} /></div>
-              <div><span className="technology-number">02</span><strong>Serveur</strong><small>Axum · Rust</small></div>
-            </div>
-            <div className="server-response" role="status" aria-live="polite"><span>Réponse</span><p>{message}</p></div>
-            <div className="demo-footer"><button onClick={testConnection} disabled={loading}><Icon name="pulse" size={17} />{loading ? 'Test en cours…' : 'Tester la connexion'}</button><small>{lastCheck ? `Dernière vérification · ${lastCheck}` : 'Aucune vérification effectuée'}</small></div>
-          </div>
-        </section>
-
-        <section className="architecture" id="architecture">
-          <div className="architecture-copy">
-            <p className="section-label section-label-light"><span>03</span> Architecture ouverte</p>
-            <h2>Une API claire,<br />dès le départ.</h2>
-            <p>Chaque route est documentée et testable dans une interface Swagger dédiée. Une base lisible pour construire les futurs services et widgets.</p>
-            <a className="button button-light" href="/api/docs" target="_blank" rel="noreferrer">Ouvrir Swagger UI <Icon name="external" size={16} /></a>
-          </div>
-          <div className="api-object" aria-label="Endpoint actuellement disponible">
-            <div className="api-object-meta"><span>ENDPOINT ACTIF</span><span>200 OK</span></div>
-            <div className="api-route"><span>GET</span><code>/api/health</code></div>
-            <div className="api-lines"><span /><span /><span /></div>
-            <p>La documentation évolue automatiquement avec le code Rust.</p>
-          </div>
-        </section>
-
-        <section className="roadmap">
-          <p className="section-label"><span>04</span> La suite</p>
-          <div className="roadmap-heading"><h2>Le socle est prêt.<br /><em>Construisons l’usage.</em></h2><p>Comptes utilisateurs, services connectés et widgets personnalisables formeront les prochaines étapes du produit.</p></div>
-          <div className="roadmap-list">
-            <article><span>01</span><h3>Identité</h3><p>Création de compte, connexion et espace personnel sécurisé.</p></article>
-            <article><span>02</span><h3>Services</h3><p>Des sources externes choisies et configurées par chaque utilisateur.</p></article>
-            <article><span>03</span><h3>Widgets</h3><p>Une interface modulable qui s’adapte aux usages quotidiens.</p></article>
-          </div>
-        </section>
-      </main>
-
-      <footer className="site-footer"><div className="footer-brand">LUMI<span>Projet G-WEB-500</span></div><p>Un espace personnel.<br />Une vision plus claire.</p><div className="footer-meta"><a href="/api/docs" target="_blank" rel="noreferrer">Documentation API</a><span>React + Rust</span><span>2026</span></div></footer>
-      {loginOpen && <div className="modal-backdrop" role="presentation" onMouseDown={event => event.target === event.currentTarget && setLoginOpen(false)}>
-        <section className="login-modal" role="dialog" aria-modal="true" aria-labelledby="login-title">
-          <button className="modal-close" onClick={() => setLoginOpen(false)} aria-label="Fermer">×</button>
-          <p className="section-label"><span>01</span> Espace personnel</p>
-          <h2 id="login-title">{registerMode ? 'Créer un compte' : 'Bienvenue sur Lumi'}.</h2>
-          <p>{registerMode ? 'Choisissez votre profil pour commencer.' : 'Connectez-vous à votre espace.'}</p>
-          <button className="text-link" type="button" disabled={authLoading} onClick={() => {
-            setRegisterMode(mode => !mode);
-            setSelectedRole('perso');
-            setAuthError('');
-            setAuthNotice('');
-          }}>{registerMode ? 'Déjà un compte ? Se connecter' : 'Créer un compte'}</button>
-          <form onSubmit={handleLogin}>
-            {registerMode && <><label htmlFor="name">Nom</label><input id="name" name="name" autoComplete="name" maxLength="100" required /></>}
-            <label htmlFor="role">Profil</label>
-            <select id="role" value={selectedRole} onChange={event => setSelectedRole(event.target.value)} disabled={authLoading}>
-              {Object.entries(ROLE_LABELS).filter(([role]) => !registerMode || role !== 'admin').map(([role, label]) => <option key={role} value={role}>{label}</option>)}
-            </select>
-            {registerMode && selectedRole === 'entreprise' && <><label htmlFor="company-name">Nom de l'entreprise</label><input id="company-name" name="company_name" autoComplete="organization" maxLength="150" required /></>}
-            <label htmlFor="email">Adresse e-mail</label>
-            <input id="email" name="email" type="email" autoComplete="email" maxLength="254" required />
-            <label htmlFor="password">Mot de passe</label>
-            <input id="password" name="password" type="password" autoComplete={registerMode ? 'new-password' : 'current-password'} minLength={registerMode ? 8 : undefined} required />
-            {authError && <p className="auth-error" role="alert">{authError}</p>}
-            {authNotice && <p role="status">{authNotice}</p>}
-            <button className="button button-dark login-submit" disabled={authLoading}>{authLoading ? 'En cours…' : registerMode ? 'Créer mon compte' : 'Se connecter'}<Icon name="arrow" size={17} /></button>
-          </form>
-          <small>Compte de démonstration : demo@lumi.local · mot de passe : lumi-demo</small>
-        </section>
-      </div>}
-    </div>
+    <>
+      <a href="#main" className="skip-link">
+        Aller au contenu
+      </a>
+      {sessionError && (
+        <div className="session-alert" role="alert">
+          {sessionError}
+          <button onClick={restore}>Réessayer</button>
+          <button
+            onClick={() => setSessionError('')}
+            aria-label="Fermer le message"
+          >
+            ×
+          </button>
+        </div>
+      )}
+      {user ? (
+        <Dashboard user={user} onLogout={logout} />
+      ) : (
+        <Landing onOpen={setAuthMode} />
+      )}
+      {!user && authMode && (
+        <AuthDialog
+          initialMode={authMode}
+          onClose={() => setAuthMode(null)}
+          onLogin={(data) => {
+            setUser(data);
+            setAuthMode(null);
+            setSessionError('');
+          }}
+        />
+      )}
+    </>
   );
 }
 
