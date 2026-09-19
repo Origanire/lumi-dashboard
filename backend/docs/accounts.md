@@ -18,7 +18,7 @@ Chaque session référence une association `user_roles` par clé étrangère. Re
 | Méthode | Route | Fonction |
 | --- | --- | --- |
 | POST | `/api/auth/register` | Créer un compte (`201`), puis se connecter |
-| POST | `/api/auth/login` | Vérifier identifiants et rôle ; créer une session |
+| POST | `/api/auth/login` | Vérifier les identifiants, déterminer le rôle et créer une session |
 | GET | `/api/auth/me` | Lire le compte et le rôle actif de la session |
 | POST | `/api/auth/logout` | Révoquer la session |
 
@@ -42,12 +42,11 @@ Connexion :
 ```json
 {
   "email": "alice@example.com",
-  "password": "mot-de-passe-exemple",
-  "role": "perso"
+  "password": "mot-de-passe-exemple"
 }
 ```
 
-Le rôle doit être attribué au compte, y compris pour `admin`. Si `role` est omis, le serveur prend le premier rôle disponible selon l'ordre `perso`, `employe`, `entreprise`, `admin` pour conserver la compatibilité avec l'ancienne connexion.
+Le serveur choisit automatiquement un rôle attribué au compte, dans l’ordre `admin`, `entreprise`, `employe`, `perso`. Le corps de connexion contient uniquement `email` et `password` ; un champ `role` est rejeté (`422`). Le rôle reste requis lors de l’inscription.
 
 La réponse contient `token` et `user` : `id`, `email`, `name`, `role` actif, `roles` attribués et `companies` (`id`, `name`). Aucun hash de mot de passe n'est exposé. Le frontend affiche l'espace correspondant au rôle validé par le serveur.
 
@@ -61,7 +60,7 @@ SELECT id, 'admin' FROM users WHERE lower(email) = lower('alice@example.com')
 ON CONFLICT DO NOTHING;
 ```
 
-L'utilisateur doit ensuite se reconnecter en choisissant `admin`. L'inscription ne permet jamais d'envoyer une liste de rôles ou de permissions arbitraires.
+L’utilisateur doit ensuite se reconnecter ; le serveur choisit automatiquement `admin`. L'inscription ne permet jamais d'envoyer une liste de rôles ou de permissions arbitraires.
 
 ## Démarrage et migrations
 
@@ -77,7 +76,7 @@ npm run dev
 
 La première migration est conservée pour ne pas invalider les bases où elle a déjà été appliquée. La seconde supprime les tables widgets/dashboard, convertit les anciens profils `personal`/`client` en `perso`, les permissions `administrator` en `admin`, et attribue `employe` aux membres d'entreprises existantes. Les anciennes sessions sont supprimées afin d'imposer une connexion avec rôle. Les comptes et les entreprises sont conservés.
 
-Swagger est disponible sur `/api/docs`. Le frontend possède un formulaire de connexion/inscription avec choix de profil. L'affichage des widgets est suspendu ; leur composant existant reste disponible pour une reprise ultérieure. Aucune API de widgets n'est exposée.
+Swagger est disponible sur `/api/docs`. Le profil est choisi uniquement à l’inscription. Les widgets sont affichés et sauvegardés localement par compte dans le navigateur ; aucune API de widgets n’est exposée. Les quatre comptes de test sont décrits dans [README-COMPTES.md](../../README-COMPTES.md) et créés explicitement via `npm run seed:test`.
 
 ## Vérifications
 
