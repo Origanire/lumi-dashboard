@@ -48,7 +48,7 @@ async fn login(app: &Router, role: &str) -> Value {
         "POST",
         "/api/auth/login",
         None,
-        json!({"email":format!("{role}@test.local"), "password":"test-password", "role":role}),
+        json!({"email":format!("{role}@test.local"), "password":"test-password"}),
     )
     .await;
     assert_eq!(status, StatusCode::OK, "{body}");
@@ -151,23 +151,32 @@ async fn roles_are_checked_and_revocation_invalidates_sessions(pool: PgPool) {
         StatusCode::FORBIDDEN
     );
     request(&app, "POST", "/api/auth/register", None, signup("perso")).await;
-    for (role, password, status) in [
-        ("admin", "test-password", StatusCode::FORBIDDEN),
-        ("perso", "incorrect", StatusCode::UNAUTHORIZED),
-    ] {
-        assert_eq!(
-            request(
-                &app,
-                "POST",
-                "/api/auth/login",
-                None,
-                json!({"email":"perso@test.local", "password":password, "role":role})
-            )
-            .await
-            .0,
-            status
-        );
-    }
+    assert_eq!(
+        request(
+            &app,
+            "POST",
+            "/api/auth/login",
+            None,
+            json!({"email":"perso@test.local", "password":"incorrect"})
+        )
+        .await
+        .0,
+        StatusCode::UNAUTHORIZED
+    );
+    // Login cannot be used to request an elevated role.
+    assert_eq!(
+        request(
+            &app,
+            "POST",
+            "/api/auth/login",
+            None,
+            json!({"email":"perso@test.local", "password":"test-password", "role":"admin"})
+        )
+        .await
+        .0,
+        StatusCode::UNPROCESSABLE_ENTITY
+    );
+    let personal = login(&app, "perso").await;
     let id: Uuid = sqlx::query_scalar("SELECT id FROM users")
         .fetch_one(&pool)
         .await
@@ -182,21 +191,12 @@ async fn roles_are_checked_and_revocation_invalidates_sessions(pool: PgPool) {
         "POST",
         "/api/auth/login",
         None,
-        json!({"email":"PERSO@test.local", "password":"test-password", "role":"admin"}),
+        json!({"email":"PERSO@test.local", "password":"test-password"}),
     )
     .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(admin["user"]["roles"], json!(["admin", "employe", "perso"]));
     assert_eq!(admin["user"]["role"], "admin");
-    let (_, default) = request(
-        &app,
-        "POST",
-        "/api/auth/login",
-        None,
-        json!({"email":"perso@test.local", "password":"test-password"}),
-    )
-    .await;
-    assert_eq!(default["user"]["role"], "perso");
     sqlx::query("DELETE FROM user_roles WHERE user_id=$1 AND role='admin'")
         .bind(id)
         .execute(&pool)
@@ -219,13 +219,15 @@ async fn roles_are_checked_and_revocation_invalidates_sessions(pool: PgPool) {
             &app,
             "GET",
             "/api/auth/me",
-            default["token"].as_str(),
+            personal["token"].as_str(),
             Value::Null
         )
         .await
         .0,
         StatusCode::OK
     );
+    let automatic = login(&app, "perso").await;
+    assert_eq!(automatic["user"]["role"], "employe");
     sqlx::query("UPDATE sessions SET expires_at=now() - interval '1 second'")
         .execute(&pool)
         .await
@@ -235,7 +237,7 @@ async fn roles_are_checked_and_revocation_invalidates_sessions(pool: PgPool) {
             &app,
             "GET",
             "/api/auth/me",
-            default["token"].as_str(),
+            personal["token"].as_str(),
             Value::Null
         )
         .await
