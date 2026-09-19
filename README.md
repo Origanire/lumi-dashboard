@@ -8,7 +8,7 @@ Projet de tableau de bord réalisé dans le cadre du module G-WEB-500.
 
 L'application proposera un tableau de bord personnalisable avec des services et des widgets.
 
-Pour cette première étape, une page React permet de tester la communication avec une API Rust via le bouton **Tester la connexion**.
+Lumi rassemble des notes, un minuteur de concentration et des widgets dans un tableau de bord personnalisable. L’interface React communique avec une API Rust pour les comptes et les sessions.
 
 Le sujet du projet est disponible dans [dashboard-project.pdf](./dashboard-project.pdf).
 
@@ -58,7 +58,9 @@ Le backend écoute sur `127.0.0.1:3001` et le frontend sur `localhost:5174`. Vit
 
 Le périmètre actuel couvre la création de compte et la connexion avec les rôles `perso`, `employe`, `entreprise` et `admin`. Les rôles sont cumulables et contrôlés côté serveur. L'inscription publique ne permet pas de s'attribuer le rôle administrateur.
 
-Le formulaire propose l'inscription et le choix du profil de connexion. Les widgets sont reportés : leur affichage et leurs endpoints backend sont retirés pour le moment.
+Le formulaire de connexion demande uniquement l’e-mail et le mot de passe. Le profil se choisit à l’inscription ; le rôle de connexion est déterminé par le serveur. Le tableau de bord propose des widgets personnalisables, enregistrés localement par compte dans le navigateur.
+
+Les quatre comptes de test (un par rôle), leurs identifiants et la commande `npm run seed:test` sont documentés dans [README-COMPTES.md](./README-COMPTES.md).
 
 Voir le [contrat API des comptes](backend/docs/accounts.md) pour le modèle relationnel, les exemples de requêtes et la migration depuis la première version.
 
@@ -72,7 +74,7 @@ Depuis la racine :
 npm run dev
 ```
 
-Ouvrir http://localhost:5174 puis cliquer sur **Tester la connexion**. Le message « Connexion réussie ! » confirme la réponse du backend. Les deux serveurs se relancent automatiquement lors des modifications. Utiliser `Ctrl+C` pour les arrêter.
+Ouvrir http://localhost:5174 puis créer un compte ou se connecter. Vite actualise le frontend lors des modifications ; pour une modification Rust, arrêter puis relancer `npm run dev`. Utiliser `Ctrl+C` pour arrêter les deux serveurs.
 
 L’API est aussi accessible directement : http://127.0.0.1:3001/api/health.
 
