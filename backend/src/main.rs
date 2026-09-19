@@ -22,6 +22,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     let listener = TcpListener::bind("127.0.0.1:3001").await?;
     println!("Backend Rust disponible sur http://127.0.0.1:3001");
-    axum::serve(listener, lumi_backend::app(pool)).await?;
+    let mailer = lumi_backend::mail::Mailer::from_env()?;
+    axum::serve(listener, lumi_backend::app_with_mailer(pool, mailer)).await?;
     Ok(())
 }
