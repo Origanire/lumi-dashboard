@@ -16,6 +16,8 @@ uuid = { version = "1", features = ["v4", "serde"] }
 sqlx = { version = "0.8.6", default-features = false, features = ["runtime-tokio", "tls-rustls-ring", "postgres", "uuid", "json", "macros", "migrate"] }
 sha2 = "0.10"
 dotenvy = "0.15"
+lettre = { version = "0.11", default-features = false, features = ["builder", "smtp-transport", "tokio1-rustls-tls"] }
+url = "2"
 
 [dev-dependencies]
 http-body-util = "0.1"
