@@ -20,11 +20,11 @@ Les règles visuelles et les composants de référence sont décrits dans [DESIG
 
 - Frontend : React en JavaScript (JSX), avec Vite.
 - Backend : Rust avec le framework Axum.
-- Base de données : à choisir ultérieurement.
+- Base de données : PostgreSQL, requêtes et migrations SQLx (sans Prisma).
 
 ## Prérequis
 
-Node.js 20.19 ou supérieur, npm et Rust avec Cargo.
+Node.js 20.19 ou supérieur, npm, Rust avec Cargo et PostgreSQL 16 (ou Docker Compose pour la base locale).
 
 ## Organisation
 
@@ -43,7 +43,24 @@ npm install
 
 ## Configuration
 
-Aucun secret ni fichier `.env` ne sont nécessaires pour cette démonstration. Le compte provisoire est `demo@lumi.local` avec le mot de passe `lumi-demo`. Le backend conserve uniquement un hash bcrypt du mot de passe et les sessions restent en mémoire. Les variables `LUMI_DEMO_EMAIL` et `LUMI_DEMO_PASSWORD_HASH` permettent de remplacer ce compte. Le backend écoute sur `127.0.0.1:3001` et le frontend sur `localhost:5174`. En développement, Vite transmet les requêtes `/api` au backend via le proxy défini dans `frontend/vite.config.js`.
+Copier la configuration locale puis démarrer PostgreSQL :
+
+```bash
+cp .env.example .env
+docker compose up -d --wait postgres
+```
+
+`DATABASE_URL` est obligatoire. Le backend charge `.env` et applique les migrations SQLx au démarrage. Le volume Docker conserve les données entre les redémarrages.
+
+En développement, `LUMI_SEED_DEMO=true` crée le compte `demo@lumi.local` / `lumi-demo` s'il n'existe pas. Les variables `LUMI_DEMO_EMAIL` et `LUMI_DEMO_PASSWORD_HASH` permettent de personnaliser le compte lors de sa création. Désactiver ce bootstrap hors développement. Les comptes et sessions sont désormais stockés dans PostgreSQL.
+
+Le backend écoute sur `127.0.0.1:3001` et le frontend sur `localhost:5174`. Vite transmet `/api` au backend via son proxy.
+
+Le périmètre actuel couvre la création de compte et la connexion avec les rôles `perso`, `employe`, `entreprise` et `admin`. Les rôles sont cumulables et contrôlés côté serveur. L'inscription publique ne permet pas de s'attribuer le rôle administrateur.
+
+Le formulaire propose l'inscription et le choix du profil de connexion. Les widgets sont reportés : leur affichage et leurs endpoints backend sont retirés pour le moment.
+
+Voir le [contrat API des comptes](backend/docs/accounts.md) pour le modèle relationnel, les exemples de requêtes et la migration depuis la première version.
 
 ## Lancement
 
@@ -65,7 +82,7 @@ Avec `npm run dev` lancé, ouvrir http://localhost:5174/api/docs (ou directement
 
 Déplier **GET /api/health**, cliquer sur **Try it out**, puis **Execute** pour envoyer une requête et afficher la réponse du backend.
 
-La spécification OpenAPI est disponible sur `/api/openapi.json`. Elle est définie à partir des annotations Rust dans `backend/src/lib.rs` et devra être complétée lors de l'ajout de nouvelles routes. Les fichiers Swagger UI sont servis localement par le backend, sans CDN.
+La spécification OpenAPI est disponible sur `/api/openapi.json`. Elle est définie à partir des annotations Rust dans `backend/src/lib.rs`, `auth.rs`. Les routes privées sont testables avec le bouton **Authorize** et le jeton reçu à la connexion. Les fichiers Swagger UI sont servis localement par le backend, sans CDN.
 
 ### Compilation et production
 
@@ -82,7 +99,7 @@ npm start
 npm test
 ```
 
-Les tests backend vérifient les routes publiques, la documentation OpenAPI ainsi que la connexion, la protection de session et la déconnexion.
+Les tests backend utilisent `DATABASE_URL` et une base PostgreSQL isolée par scénario ; le compte de test doit pouvoir créer des bases. Ils vérifient l’inscription, les rôles cumulables, le contrôle du rôle de connexion, les sessions et l’unicité des comptes. Voir les [instructions détaillées](backend/docs/accounts.md#vérifications).
 
 ## Équipe
 
