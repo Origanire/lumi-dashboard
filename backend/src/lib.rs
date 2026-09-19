@@ -12,7 +12,9 @@ use utoipa::{
 use utoipa_swagger_ui::SwaggerUi;
 
 pub mod auth;
+pub mod email_auth;
 mod error;
+pub mod mail;
 
 pub const DEMO_EMAIL: &str = "demo@lumi.local";
 pub const DEMO_PASSWORD_HASH: &str = "$2b$12$VUVLb5qMxqmDrARbU8ZH6ehBHOxOuja0z4nCTCeFyK2xPWoi8/EJO";
@@ -21,6 +23,7 @@ pub static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!();
 #[derive(Clone)]
 pub struct AppState {
     pub pool: PgPool,
+    pub mailer: mail::Mailer,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -47,7 +50,7 @@ impl Modify for Security {
 #[derive(OpenApi)]
 #[openapi(
     info(title = "Lumi API", version = "0.3.0"),
-    paths(health, auth::register, auth::login, auth::current_user, auth::logout),
+    paths(health, auth::register, auth::login, auth::current_user, auth::logout, email_auth::resend_verification, email_auth::confirm_email, email_auth::request_magic, email_auth::consume_magic, email_auth::forgot_password, email_auth::reset_password),
     components(schemas(HealthResponse, MessageResponse)),
     modifiers(&Security)
 )]
@@ -71,13 +74,38 @@ async fn not_found() -> (StatusCode, Json<MessageResponse>) {
 
 /// The caller supplies a migrated pool, also allowing isolated databases in tests.
 pub fn app(pool: PgPool) -> Router {
+    app_with_mailer(pool, mail::Mailer::unavailable())
+}
+
+pub fn app_with_mailer(pool: PgPool, mailer: mail::Mailer) -> Router {
     Router::new()
         .route("/api/health", get(health))
         .route("/api/auth/register", post(auth::register))
         .route("/api/auth/login", post(auth::login))
         .route("/api/auth/me", get(auth::current_user))
         .route("/api/auth/logout", post(auth::logout))
+        .route(
+            "/api/auth/email/resend",
+            post(email_auth::resend_verification),
+        )
+        .route("/api/auth/email/confirm", post(email_auth::confirm_email))
+        .route("/api/auth/magic/request", post(email_auth::request_magic))
+        .route("/api/auth/magic/consume", post(email_auth::consume_magic))
+        .route(
+            "/api/auth/password/forgot",
+            post(email_auth::forgot_password),
+        )
+        .route("/api/auth/password/reset", post(email_auth::reset_password))
         .merge(SwaggerUi::new("/api/docs").url("/api/openapi.json", ApiDoc::openapi()))
         .fallback(not_found)
-        .with_state(AppState { pool })
+        .layer(axum::middleware::from_fn(
+            |request: axum::extract::Request, next: axum::middleware::Next| async move {
+                let mut response = next.run(request).await;
+                response
+                    .headers_mut()
+                    .insert("cache-control", "no-store".parse().unwrap());
+                response
+            },
+        ))
+        .with_state(AppState { pool, mailer })
 }
