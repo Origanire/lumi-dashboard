@@ -54,6 +54,7 @@ pub struct UserResponse {
     role: Role,
     roles: Vec<Role>,
     companies: Vec<CompanyResponse>,
+    email_verified: bool,
 }
 #[derive(FromRow)]
 struct Account {
@@ -61,6 +62,7 @@ struct Account {
     email: String,
     name: String,
     password_hash: String,
+    email_verified: bool,
 }
 
 pub struct AuthUser {
@@ -68,10 +70,10 @@ pub struct AuthUser {
     pub role: Role,
     token_hash: String,
 }
-fn hash_token(token: &str) -> String {
+pub(crate) fn hash_token(token: &str) -> String {
     format!("{:x}", Sha256::digest(token.as_bytes()))
 }
-fn internal() -> ApiError {
+pub(crate) fn internal() -> ApiError {
     ApiError(
         StatusCode::INTERNAL_SERVER_ERROR,
         "Erreur interne du serveur.",
@@ -90,7 +92,7 @@ impl FromRequestParts<AppState> for AuthUser {
             .ok_or_else(ApiError::unauthorized)?;
         let token_hash = hash_token(token);
         let (id, role) = sqlx::query_as(
-            "SELECT user_id, role FROM sessions WHERE token_hash = $1 AND expires_at > now()",
+            "SELECT s.user_id, s.role FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.email_verified_at IS NOT NULL",
         )
         .bind(&token_hash)
         .fetch_optional(&state.pool)
@@ -142,6 +144,7 @@ async fn response(
         role,
         roles,
         companies,
+        email_verified: account.email_verified,
     })
 }
 
@@ -172,12 +175,7 @@ pub async fn register(
             "Le nom doit contenir entre 1 et 100 caractères.",
         ));
     }
-    // bcrypt accepts at most 72 bytes; reject longer passwords rather than truncate.
-    if input.password.chars().count() < 8 || input.password.len() > 72 {
-        return Err(ApiError::invalid(
-            "Le mot de passe doit contenir au moins 8 caractères et au plus 72 octets.",
-        ));
-    }
+    validate_password(&input.password)?;
     let company_name = input.company_name.as_deref().map(str::trim);
     if matches!(input.role, Role::Entreprise) {
         if company_name.is_none_or(|s| s.is_empty() || s.chars().count() > 150) {
@@ -202,7 +200,7 @@ pub async fn register(
          ON CONFLICT (lower(email)) DO NOTHING RETURNING id",
     )
     .bind(id)
-    .bind(email)
+    .bind(&email)
     .bind(name)
     .bind(hash)
     .fetch_optional(&mut *tx)
@@ -232,10 +230,17 @@ pub async fn register(
             .await?;
     }
     tx.commit().await?;
+    let sent = crate::email_auth::request_link(&state, &email, "verify")
+        .await
+        .unwrap_or(false);
     Ok((
         StatusCode::CREATED,
         Json(MessageResponse {
-            message: "Compte créé. Vous pouvez vous connecter.",
+            message: if sent {
+                "Compte créé. Confirmez votre adresse grâce au lien envoyé par e-mail avant de vous connecter."
+            } else {
+                "Compte créé. L’e-mail n’a pas pu être envoyé. Patientez une minute puis utilisez Renvoyer le lien de confirmation."
+            },
         }),
     ))
 }
@@ -245,11 +250,12 @@ pub async fn login(
     State(state): State<AppState>,
     Json(input): Json<LoginRequest>,
 ) -> Result<Json<LoginResponse>, ApiError> {
+    let mut tx = state.pool.begin().await?;
     let account: Option<Account> = sqlx::query_as(
-        "SELECT id, email, name, password_hash FROM users WHERE lower(email) = lower($1)",
+        "SELECT id, email, name, password_hash, email_verified_at IS NOT NULL AS email_verified FROM users WHERE lower(email) = lower($1) FOR UPDATE",
     )
     .bind(input.email.trim())
-    .fetch_optional(&state.pool)
+    .fetch_optional(&mut *tx)
     .await?;
     let hash = account
         .as_ref()
@@ -264,24 +270,51 @@ pub async fn login(
         StatusCode::UNAUTHORIZED,
         "Adresse e-mail ou mot de passe incorrect.",
     ))?;
-    // Hold the role row until the session exists so a concurrent revocation cannot race login.
-    let mut tx = state.pool.begin().await?;
+    let result = create_session(&mut tx, account.id).await?;
+    tx.commit().await?;
+    Ok(Json(result))
+}
+
+pub(crate) fn new_token() -> String {
+    format!("{}{}", Uuid::new_v4().simple(), Uuid::new_v4().simple())
+}
+
+pub(crate) fn validate_password(password: &str) -> Result<(), ApiError> {
+    if password.chars().count() < 8 || password.len() > 72 {
+        return Err(ApiError::invalid(
+            "Le mot de passe doit contenir au moins 8 caractères et au plus 72 octets.",
+        ));
+    }
+    Ok(())
+}
+
+pub(crate) async fn create_session(
+    connection: &mut PgConnection,
+    id: Uuid,
+) -> Result<LoginResponse, ApiError> {
+    let account: Account = sqlx::query_as("SELECT id,email,name,password_hash,email_verified_at IS NOT NULL AS email_verified FROM users WHERE id=$1 FOR UPDATE")
+        .bind(id).fetch_one(&mut *connection).await?;
+    if !account.email_verified {
+        return Err(ApiError(
+            StatusCode::FORBIDDEN,
+            "Confirmez votre adresse e-mail avant de vous connecter. Vous pouvez renvoyer le lien de confirmation.",
+        ));
+    }
     let role: Role = sqlx::query_scalar(
         "SELECT role FROM user_roles WHERE user_id = $1
          ORDER BY CASE role WHEN 'admin' THEN 0 WHEN 'entreprise' THEN 1 WHEN 'employe' THEN 2 ELSE 3 END
          LIMIT 1 FOR KEY SHARE"
-    ).bind(account.id).fetch_optional(&mut *tx).await?
+    ).bind(id).fetch_optional(&mut *connection).await?
         .ok_or(ApiError(StatusCode::FORBIDDEN, "Aucun rôle n'est attribué à votre compte."))?;
-    let user = response(&mut tx, account, role).await?;
-    let token = format!("{}{}", Uuid::new_v4().simple(), Uuid::new_v4().simple());
+    let user = response(connection, account, role).await?;
+    let token = new_token();
     sqlx::query("INSERT INTO sessions (token_hash, user_id, role) VALUES ($1,$2,$3)")
         .bind(hash_token(&token))
-        .bind(user.id)
+        .bind(id)
         .bind(role)
-        .execute(&mut *tx)
+        .execute(&mut *connection)
         .await?;
-    tx.commit().await?;
-    Ok(Json(LoginResponse { token, user }))
+    Ok(LoginResponse { token, user })
 }
 
 #[utoipa::path(get, path = "/api/auth/me", security(("bearer" = [])), responses((status = 200, body = UserResponse), (status = 401, body = MessageResponse)))]
@@ -289,7 +322,7 @@ pub async fn current_user(
     State(state): State<AppState>,
     user: AuthUser,
 ) -> Result<Json<UserResponse>, ApiError> {
-    let account = sqlx::query_as("SELECT id, email, name, password_hash FROM users WHERE id = $1")
+    let account = sqlx::query_as("SELECT id, email, name, password_hash, email_verified_at IS NOT NULL AS email_verified FROM users WHERE id = $1")
         .bind(user.id)
         .fetch_optional(&state.pool)
         .await?
