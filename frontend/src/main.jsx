@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import WidgetDashboard from './WidgetDashboard';
 import './style.css';
 
 function Icon({ name, size = 20 }) {
@@ -13,6 +12,8 @@ function Icon({ name, size = 20 }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
 
+const ROLE_LABELS = { perso: 'Personnel', employe: 'Employé', entreprise: 'Entreprise', admin: 'Administrateur' };
+
 function Dashboard({ user, onLogout }) {
   return (
     <div className="dashboard-page">
@@ -21,9 +22,10 @@ function Dashboard({ user, onLogout }) {
         <div className="dashboard-account"><span>{user.name}</span><button className="logout-button" onClick={onLogout}>Se déconnecter</button></div>
       </header>
       <main className="dashboard-main">
-        <p className="section-label"><span>01</span> Espace personnel</p>
+        <p className="section-label"><span>01</span> Espace {ROLE_LABELS[user.role] || user.role}</p>
         <h1>Bonjour,<br /><em>{user.name}.</em></h1>
-        <WidgetDashboard />
+        <p>Connecté en tant que {ROLE_LABELS[user.role] || user.role}.</p>
+        {user.companies?.map(company => <p key={company.id}>{company.name}</p>)}
       </main>
     </div>
   );
@@ -37,6 +39,9 @@ function App() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState('');
+  const [registerMode, setRegisterMode] = useState(false);
+  const [selectedRole, setSelectedRole] = useState('perso');
+  const [authNotice, setAuthNotice] = useState('');
   const [user, setUser] = useState(null);
 
   useEffect(() => {
@@ -52,15 +57,26 @@ function App() {
     event.preventDefault();
     setAuthLoading(true);
     setAuthError('');
+    setAuthNotice('');
     const form = new FormData(event.currentTarget);
     try {
-      const response = await fetch('/api/auth/login', {
+      const payload = { email: form.get('email'), password: form.get('password'), role: selectedRole };
+      if (registerMode) {
+        payload.name = form.get('name');
+        if (selectedRole === 'entreprise') payload.company_name = form.get('company_name');
+      }
+      const response = await fetch(registerMode ? '/api/auth/register' : '/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: form.get('email'), password: form.get('password') }),
+        body: JSON.stringify(payload),
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Connexion impossible.');
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || 'Vérifiez les informations saisies.');
+      if (registerMode) {
+        setRegisterMode(false);
+        setAuthNotice(data.message);
+        return;
+      }
       sessionStorage.setItem('lumi_token', data.token);
       setUser(data.user);
       setLoginOpen(false);
@@ -189,15 +205,28 @@ function App() {
         <section className="login-modal" role="dialog" aria-modal="true" aria-labelledby="login-title">
           <button className="modal-close" onClick={() => setLoginOpen(false)} aria-label="Fermer">×</button>
           <p className="section-label"><span>01</span> Espace personnel</p>
-          <h2 id="login-title">Bienvenue sur <span className="lumi-word">Lumi</span>.</h2>
-          <p>Connectez-vous pour accéder à votre dashboard.</p>
+          <h2 id="login-title">{registerMode ? 'Créer un compte' : 'Bienvenue sur Lumi'}.</h2>
+          <p>{registerMode ? 'Choisissez votre profil pour commencer.' : 'Connectez-vous à votre espace.'}</p>
+          <button className="text-link" type="button" disabled={authLoading} onClick={() => {
+            setRegisterMode(mode => !mode);
+            setSelectedRole('perso');
+            setAuthError('');
+            setAuthNotice('');
+          }}>{registerMode ? 'Déjà un compte ? Se connecter' : 'Créer un compte'}</button>
           <form onSubmit={handleLogin}>
+            {registerMode && <><label htmlFor="name">Nom</label><input id="name" name="name" autoComplete="name" maxLength="100" required /></>}
+            <label htmlFor="role">Profil</label>
+            <select id="role" value={selectedRole} onChange={event => setSelectedRole(event.target.value)} disabled={authLoading}>
+              {Object.entries(ROLE_LABELS).filter(([role]) => !registerMode || role !== 'admin').map(([role, label]) => <option key={role} value={role}>{label}</option>)}
+            </select>
+            {registerMode && selectedRole === 'entreprise' && <><label htmlFor="company-name">Nom de l'entreprise</label><input id="company-name" name="company_name" autoComplete="organization" maxLength="150" required /></>}
             <label htmlFor="email">Adresse e-mail</label>
-            <input id="email" name="email" type="email" autoComplete="email" defaultValue="demo@lumi.local" required />
+            <input id="email" name="email" type="email" autoComplete="email" maxLength="254" required />
             <label htmlFor="password">Mot de passe</label>
-            <input id="password" name="password" type="password" autoComplete="current-password" required />
+            <input id="password" name="password" type="password" autoComplete={registerMode ? 'new-password' : 'current-password'} minLength={registerMode ? 8 : undefined} required />
             {authError && <p className="auth-error" role="alert">{authError}</p>}
-            <button className="button button-dark login-submit" disabled={authLoading}>{authLoading ? 'Connexion…' : 'Accéder au dashboard'}<Icon name="arrow" size={17} /></button>
+            {authNotice && <p role="status">{authNotice}</p>}
+            <button className="button button-dark login-submit" disabled={authLoading}>{authLoading ? 'En cours…' : registerMode ? 'Créer mon compte' : 'Se connecter'}<Icon name="arrow" size={17} /></button>
           </form>
           <small>Compte de démonstration : demo@lumi.local · mot de passe : lumi-demo</small>
         </section>
