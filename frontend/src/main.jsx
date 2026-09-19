@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import WidgetDashboard from './WidgetDashboard';
-import Dialog from './components/Dialog';
+import AuthDialog from './components/AuthDialog';
+import EmailAction, { readEmailAction } from './components/EmailAction';
+const initialEmailAction = readEmailAction();
 import './style.css';
 
 const ROLE_LABELS = {
@@ -9,11 +11,6 @@ const ROLE_LABELS = {
   employe: 'Employé',
   entreprise: 'Entreprise',
   admin: 'Administrateur',
-};
-const ROLE_DESCRIPTIONS = {
-  perso: 'Pour organiser votre quotidien.',
-  employe: 'Pour votre journée de travail.',
-  entreprise: 'Pour créer votre espace professionnel.',
 };
 
 function Icon({ name, size = 20 }) {
@@ -151,173 +148,6 @@ async function api(path, { body, ...options } = {}) {
   return data;
 }
 
-function AuthDialog({ initialMode, onClose, onLogin }) {
-  const [mode, setMode] = useState(initialMode);
-  const [role, setRole] = useState('perso');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
-  const [visible, setVisible] = useState(false);
-  const register = mode === 'register';
-  async function submit(event) {
-    event.preventDefault();
-    setBusy(true);
-    setError('');
-    setNotice('');
-    const form = new FormData(event.currentTarget);
-    const payload = {
-      email: form.get('email'),
-      password: form.get('password'),
-    };
-    if (register) {
-      payload.name = form.get('name');
-      payload.role = role;
-      if (role === 'entreprise')
-        payload.company_name = form.get('company_name');
-    }
-    try {
-      const data = await api(register ? '/auth/register' : '/auth/login', {
-        method: 'POST',
-        body: payload,
-      });
-      if (register) {
-        setMode('login');
-        setVisible(false);
-        setNotice(
-          'Votre compte est créé. Connectez-vous pour ouvrir votre espace.',
-        );
-      } else {
-        sessionStorage.setItem('lumi_token', data.token);
-        onLogin(data.user);
-      }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <Dialog
-      titleId="auth-title"
-      onClose={() => {
-        if (!busy) onClose();
-      }}
-      className="auth-dialog"
-    >
-      <span className="eyebrow">Bienvenue chez Lumi</span>
-      <h2 id="auth-title">
-        {register ? 'Un espace à vous.' : 'Heureux de vous revoir.'}
-      </h2>
-      <p className="muted">
-        {register
-          ? 'Quelques informations pour commencer.'
-          : 'Retrouvez votre tableau de bord et vos repères.'}
-      </p>
-      <form onSubmit={submit} className="auth-form" aria-busy={busy}>
-        <fieldset disabled={busy}>
-          {register && (
-            <>
-              <label htmlFor="name">Votre nom</label>
-              <input
-                id="name"
-                name="name"
-                autoComplete="name"
-                maxLength="100"
-                required
-              />
-              <label htmlFor="role">Type de compte</label>
-              <select
-                id="role"
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-              >
-                {Object.keys(ROLE_DESCRIPTIONS).map((r) => (
-                  <option value={r} key={r}>
-                    {ROLE_LABELS[r]}
-                  </option>
-                ))}
-              </select>
-              <p className="field-hint">{ROLE_DESCRIPTIONS[role]}</p>
-              {role === 'entreprise' && (
-                <>
-                  <label htmlFor="company">Nom de l’entreprise</label>
-                  <input
-                    id="company"
-                    name="company_name"
-                    autoComplete="organization"
-                    maxLength="150"
-                    required
-                  />
-                </>
-              )}
-            </>
-          )}
-          <label htmlFor="email">Adresse e-mail</label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            placeholder="vous@exemple.fr"
-            maxLength="254"
-            required
-          />
-          <label htmlFor="password">Mot de passe</label>
-          <div className="password-field">
-            <input
-              id="password"
-              name="password"
-              type={visible ? 'text' : 'password'}
-              autoComplete={register ? 'new-password' : 'current-password'}
-              minLength={register ? 8 : undefined}
-              required
-            />
-            <button
-              type="button"
-              aria-pressed={visible}
-              onClick={() => setVisible(!visible)}
-            >
-              {visible ? 'Masquer' : 'Afficher'}
-            </button>
-          </div>
-          {register && <p className="field-hint">8 caractères minimum.</p>}
-          {error && (
-            <p className="feedback error" role="alert">
-              {error}
-            </p>
-          )}
-          {notice && (
-            <p className="feedback success" role="status">
-              {notice}
-            </p>
-          )}
-          <button className="button button-dark auth-submit" disabled={busy}>
-            {busy
-              ? 'Un instant…'
-              : register
-                ? 'Créer mon compte'
-                : 'Se connecter'}
-            <Icon name="arrow" size={18} />
-          </button>
-        </fieldset>
-      </form>
-      <p className="auth-switch">
-        {register ? 'Déjà un compte ?' : 'Nouveau sur Lumi ?'}{' '}
-        <button
-          className="text-button"
-          disabled={busy}
-          onClick={() => {
-            setMode(register ? 'login' : 'register');
-            setError('');
-            setNotice('');
-          }}
-        >
-          {register ? 'Se connecter' : 'Créer un compte'}
-        </button>
-      </p>
-    </Dialog>
-  );
-}
 
 function Landing({ onOpen }) {
   const [preview, setPreview] = useState('notes');
@@ -564,7 +394,7 @@ function Dashboard({ user, onLogout }) {
           <div className="workspace-account">
             <span className="avatar">{initials}</span>
             <div>
-              <strong>{user.name}</strong>
+              <strong>{user.name} {user.email_verified && <span className="verified-mark" aria-label="Adresse e-mail vérifiée" title="Adresse e-mail vérifiée">✓</span>}</strong>
               <small>{ROLE_LABELS[user.role]}</small>
             </div>
             <button
@@ -624,7 +454,7 @@ function Dashboard({ user, onLogout }) {
                   </div>
                   <div>
                     <dt>Adresse e-mail</dt>
-                    <dd>{user.email}</dd>
+                    <dd>{user.email} {user.email_verified && <span className="verification-badge">✓ Adresse e-mail vérifiée</span>}</dd>
                   </div>
                   <div>
                     <dt>Rôles attribués</dt>
@@ -653,8 +483,9 @@ function Dashboard({ user, onLogout }) {
 function App() {
   const [user, setUser] = useState(null);
   const [authMode, setAuthMode] = useState(null);
+  const [emailAction, setEmailAction] = useState(initialEmailAction);
   const [restoring, setRestoring] = useState(
-    !!sessionStorage.getItem('lumi_token'),
+    !initialEmailAction && !!sessionStorage.getItem('lumi_token'),
   );
   const [sessionError, setSessionError] = useState('');
   async function restore() {
@@ -670,7 +501,7 @@ function App() {
     }
   }
   useEffect(() => {
-    if (sessionStorage.getItem('lumi_token')) restore();
+    if (!initialEmailAction && sessionStorage.getItem('lumi_token')) restore();
   }, []);
   async function logout() {
     try {
@@ -685,6 +516,9 @@ function App() {
     setUser(null);
     setSessionError('');
   }
+  if (emailAction) return <EmailAction action={emailAction} api={api}
+    onLogin={data => { setUser(data); setEmailAction(null); setRestoring(false); }}
+    onDone={mode => { sessionStorage.removeItem('lumi_token'); setUser(null); setEmailAction(null); setRestoring(false); setAuthMode(mode); }} />;
   if (restoring)
     return (
       <div className="loading-screen" role="status">
@@ -716,6 +550,7 @@ function App() {
       )}
       {!user && authMode && (
         <AuthDialog
+          api={api}
           initialMode={authMode}
           onClose={() => setAuthMode(null)}
           onLogin={(data) => {
