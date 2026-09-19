@@ -34,8 +34,6 @@ pub struct RegisterRequest {
 pub struct LoginRequest {
     email: String,
     password: String,
-    /// Optional for compatibility; defaults to the first assigned role.
-    role: Option<Role>,
 }
 #[derive(Serialize, ToSchema)]
 pub struct LoginResponse {
@@ -269,11 +267,11 @@ pub async fn login(
     // Hold the role row until the session exists so a concurrent revocation cannot race login.
     let mut tx = state.pool.begin().await?;
     let role: Role = sqlx::query_scalar(
-        "SELECT role FROM user_roles WHERE user_id = $1 AND ($2::text IS NULL OR role = $2)
-         ORDER BY CASE role WHEN 'perso' THEN 0 WHEN 'employe' THEN 1 WHEN 'entreprise' THEN 2 ELSE 3 END
+        "SELECT role FROM user_roles WHERE user_id = $1
+         ORDER BY CASE role WHEN 'admin' THEN 0 WHEN 'entreprise' THEN 1 WHEN 'employe' THEN 2 ELSE 3 END
          LIMIT 1 FOR KEY SHARE"
-    ).bind(account.id).bind(input.role).fetch_optional(&mut *tx).await?
-        .ok_or(ApiError(StatusCode::FORBIDDEN, "Ce rôle n'est pas attribué à votre compte."))?;
+    ).bind(account.id).fetch_optional(&mut *tx).await?
+        .ok_or(ApiError(StatusCode::FORBIDDEN, "Aucun rôle n'est attribué à votre compte."))?;
     let user = response(&mut tx, account, role).await?;
     let token = format!("{}{}", Uuid::new_v4().simple(), Uuid::new_v4().simple());
     sqlx::query("INSERT INTO sessions (token_hash, user_id, role) VALUES ($1,$2,$3)")
