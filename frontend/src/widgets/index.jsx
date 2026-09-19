@@ -22,7 +22,7 @@ export const WIDGET_TYPES = {
     icon: '☼',
     color: 'sand',
     defaultWidth: 6,
-    defaultHeight: 1,
+    defaultHeight: 2,
   },
   agenda: {
     label: 'Agenda',
@@ -30,7 +30,7 @@ export const WIDGET_TYPES = {
     icon: '◷',
     color: 'blue',
     defaultWidth: 6,
-    defaultHeight: 1,
+    defaultHeight: 2,
   },
   focus: {
     label: 'Focus',
@@ -38,7 +38,7 @@ export const WIDGET_TYPES = {
     icon: '◎',
     color: 'red',
     defaultWidth: 6,
-    defaultHeight: 1,
+    defaultHeight: 2,
   },
   notes: {
     label: 'Notes',
@@ -46,7 +46,7 @@ export const WIDGET_TYPES = {
     icon: '≡',
     color: 'mint',
     defaultWidth: 6,
-    defaultHeight: 1,
+    defaultHeight: 2,
   },
   spotify_player: {
     label: 'Spotify Now Playing',
@@ -54,7 +54,7 @@ export const WIDGET_TYPES = {
     icon: '♫',
     color: 'spotify',
     defaultWidth: 6,
-    defaultHeight: 1,
+    defaultHeight: 2,
   },
   spotify_top: {
     label: 'Spotify Top Titres',
@@ -75,7 +75,7 @@ export const WIDGET_CONFIG_KEYS = {
   spotify_top: ['type', 'title', 'clientId', 'timeRange', 'limit'],
 };
 
-export function WidgetContent({ widget }) {
+export function WidgetContent({ widget, onChange }) {
   switch (widget.type) {
     case 'weather':
       return <WeatherWidget widget={widget} />;
@@ -84,7 +84,7 @@ export function WidgetContent({ widget }) {
     case 'focus':
       return <FocusWidget widget={widget} />;
     case 'notes':
-      return <NotesWidget widget={widget} />;
+      return <NotesWidget widget={widget} onChange={onChange} />;
     case 'spotify_player':
       return <SpotifyNowPlayingWidget widget={widget} />;
     case 'spotify_top':
@@ -98,13 +98,49 @@ export function WidgetEditorFields({ draft, update }) {
   if (draft.type === 'weather') {
     return (
       <>
+        <p className="field-hint">
+          Aperçu avec des données d’exemple, sans connexion à un service météo.
+        </p>
         <label htmlFor="widget-city">Ville</label>
         <input
           id="widget-city"
           value={draft.city || ''}
-          onChange={event => update('city', event.target.value)}
+          onChange={(event) => update('city', event.target.value)}
           maxLength="24"
         />
+      </>
+    );
+  }
+
+  if (draft.type === 'agenda') {
+    return (
+      <>
+        <label htmlFor="widget-event">Rendez-vous</label>
+        <input
+          id="widget-event"
+          value={draft.nextEvent || ''}
+          onChange={(event) => update('nextEvent', event.target.value)}
+          maxLength="100"
+          placeholder="Ex. Faire le point"
+        />
+        <label htmlFor="widget-time">Heure</label>
+        <input
+          id="widget-time"
+          type="time"
+          value={draft.time || '14:30'}
+          onChange={(event) => update('time', event.target.value)}
+        />
+        <label htmlFor="widget-detail">Détails</label>
+        <input
+          id="widget-detail"
+          value={draft.detail || ''}
+          onChange={(event) => update('detail', event.target.value)}
+          maxLength="150"
+          placeholder="Lieu, durée…"
+        />
+        <p className="field-hint">
+          Un repère saisi par vous, sans synchronisation avec un calendrier.
+        </p>
       </>
     );
   }
@@ -116,9 +152,9 @@ export function WidgetEditorFields({ draft, update }) {
         <textarea
           id="widget-content"
           value={draft.content || ''}
-          onChange={event => update('content', event.target.value)}
+          onChange={(event) => update('content', event.target.value)}
           rows="3"
-          maxLength="120"
+          maxLength="2000"
         />
       </>
     );
@@ -134,7 +170,7 @@ export function WidgetEditorFields({ draft, update }) {
           min="5"
           max="120"
           value={draft.duration ?? 25}
-          onChange={event => update('duration', Number(event.target.value))}
+          onChange={(event) => update('duration', Number(event.target.value))}
         />
       </>
     );
@@ -143,22 +179,28 @@ export function WidgetEditorFields({ draft, update }) {
   if (draft.type === 'spotify_player') {
     return (
       <>
-        <label htmlFor="widget-spotify-client-id">Spotify Client ID (optionnel si configuré globalement)</label>
+        <label htmlFor="widget-spotify-client-id">
+          Spotify Client ID (optionnel si configuré globalement)
+        </label>
         <input
           id="widget-spotify-client-id"
           type="text"
           placeholder="Ex: 4a3e7b..."
           value={draft.clientId || ''}
-          onChange={event => update('clientId', event.target.value)}
+          onChange={(event) => update('clientId', event.target.value)}
         />
-        <label htmlFor="widget-spotify-refresh">Intervalle de rafraîchissement (secondes, min 5)</label>
+        <label htmlFor="widget-spotify-refresh">
+          Intervalle de rafraîchissement (secondes, min 5)
+        </label>
         <input
           id="widget-spotify-refresh"
           type="number"
           min="5"
           max="120"
           value={draft.refreshInterval ?? 10}
-          onChange={event => update('refreshInterval', Number(event.target.value))}
+          onChange={(event) =>
+            update('refreshInterval', Number(event.target.value))
+          }
         />
       </>
     );
@@ -167,13 +209,15 @@ export function WidgetEditorFields({ draft, update }) {
   if (draft.type === 'spotify_top') {
     return (
       <>
-        <label htmlFor="widget-spotify-client-id-top">Spotify Client ID (optionnel si configuré globalement)</label>
+        <label htmlFor="widget-spotify-client-id-top">
+          Spotify Client ID (optionnel si configuré globalement)
+        </label>
         <input
           id="widget-spotify-client-id-top"
           type="text"
           placeholder="Ex: 4a3e7b..."
           value={draft.clientId || ''}
-          onChange={event => update('clientId', event.target.value)}
+          onChange={(event) => update('clientId', event.target.value)}
         />
         <div className="widget-size-fields">
           <div>
@@ -181,7 +225,7 @@ export function WidgetEditorFields({ draft, update }) {
             <select
               id="widget-spotify-timerange"
               value={draft.timeRange || 'short_term'}
-              onChange={event => update('timeRange', event.target.value)}
+              onChange={(event) => update('timeRange', event.target.value)}
             >
               <option value="short_term">4 dernières semaines</option>
               <option value="medium_term">6 derniers mois</option>
@@ -196,7 +240,7 @@ export function WidgetEditorFields({ draft, update }) {
               min="1"
               max="10"
               value={draft.limit ?? 3}
-              onChange={event => update('limit', Number(event.target.value))}
+              onChange={(event) => update('limit', Number(event.target.value))}
             />
           </div>
         </div>
