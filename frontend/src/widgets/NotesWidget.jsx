@@ -1,11 +1,16 @@
 import React from 'react';
 
-export default function NotesWidget({ widget }) {
+export default function NotesWidget({ widget, onChange }) {
   return (
     <div className="notes-content">
-      <p>{widget.content || 'Une idée à noter...'}</p>
-      <small>Dernière modification · à l’instant</small>
+      <textarea
+        aria-label={`Contenu de ${widget.title}`}
+        value={widget.content || ''}
+        onChange={(event) => onChange({ content: event.target.value })}
+        maxLength={2000}
+        placeholder="Une idée, un rappel, quelques mots…"
+      />
+      <small>Vos notes restent sur ce navigateur.</small>
     </div>
   );
 }
-
