@@ -1,0 +1,90 @@
+# Comptes et authentification
+
+Le périmètre actuel est limité aux utilisateurs, à leurs rôles et aux sessions. Axum expose les routes REST ; SQLx effectue directement les requêtes, le mapping `FromRow` et les migrations PostgreSQL. Aucun Prisma, repository ou service supplémentaire.
+
+## Modèle
+
+- `users` : UUID, e-mail unique sans distinction de casse, nom, hash bcrypt, date de création.
+- `roles` et `user_roles` : rôles cumulables `perso`, `employe`, `entreprise`, `admin`.
+- `companies` et `company_memberships` : entreprises et relations avec les comptes. Une inscription entreprise crée l'entreprise et son premier membre dans la même transaction.
+- `sessions` : hash SHA-256 du jeton, utilisateur, rôle actif et expiration après sept jours.
+
+Une inscription employé déclare un profil ; elle ne donne pas automatiquement accès à une entreprise existante. L'association à une entreprise sera gérée ultérieurement. Les rôles supplémentaires sont attribués en base par une personne autorisée. Le rôle admin ne peut pas être choisi à l'inscription publique.
+
+Chaque session référence une association `user_roles` par clé étrangère. Retirer cette association révoque automatiquement les sessions correspondantes. Le rôle est vérifié côté serveur, pas déduit de l'interface. `AuthUser::require_admin()` permet de protéger les futures opérations administrateur ; aucune interface d'administration ni fonctionnalité métier propre à chaque rôle n'est ajoutée à ce stade.
+
+## Routes
+
+| Méthode | Route | Fonction |
+| --- | --- | --- |
+| POST | `/api/auth/register` | Créer un compte (`201`), puis se connecter |
+| POST | `/api/auth/login` | Vérifier identifiants et rôle ; créer une session |
+| GET | `/api/auth/me` | Lire le compte et le rôle actif de la session |
+| POST | `/api/auth/logout` | Révoquer la session |
+
+Les deux dernières routes nécessitent `Authorization: Bearer <token>`.
+
+Inscription :
+
+```json
+{
+  "email": "alice@example.com",
+  "name": "Alice",
+  "password": "mot-de-passe-exemple",
+  "role": "perso"
+}
+```
+
+Rôles publics : `perso`, `employe`, `entreprise`. Pour `entreprise`, ajouter `"company_name": "Mon entreprise"`. Le nom est obligatoire (100 caractères maximum), le mot de passe doit contenir au moins 8 caractères et au plus 72 octets (limite bcrypt). L'adresse est normalisée et vérifiée sommairement ; aucune confirmation par e-mail n'est encore implémentée.
+
+Connexion :
+
+```json
+{
+  "email": "alice@example.com",
+  "password": "mot-de-passe-exemple",
+  "role": "perso"
+}
+```
+
+Le rôle doit être attribué au compte, y compris pour `admin`. Si `role` est omis, le serveur prend le premier rôle disponible selon l'ordre `perso`, `employe`, `entreprise`, `admin` pour conserver la compatibilité avec l'ancienne connexion.
+
+La réponse contient `token` et `user` : `id`, `email`, `name`, `role` actif, `roles` attribués et `companies` (`id`, `name`). Aucun hash de mot de passe n'est exposé. Le frontend affiche l'espace correspondant au rôle validé par le serveur.
+
+Erreurs : `400` données invalides, `401` identifiants/session invalides ou expirés, `403` rôle non attribué ou inscription admin interdite, `409` e-mail déjà utilisé, `422` JSON incompatible. Les erreurs métier utilisent `{ "message": "…" }`.
+
+Attribution admin par un opérateur autorisé (remplacer l'adresse) :
+
+```sql
+INSERT INTO user_roles (user_id, role)
+SELECT id, 'admin' FROM users WHERE lower(email) = lower('alice@example.com')
+ON CONFLICT DO NOTHING;
+```
+
+L'utilisateur doit ensuite se reconnecter en choisissant `admin`. L'inscription ne permet jamais d'envoyer une liste de rôles ou de permissions arbitraires.
+
+## Démarrage et migrations
+
+Depuis la racine :
+
+```bash
+cp .env.example .env
+docker compose up -d --wait postgres
+npm run dev
+```
+
+`DATABASE_URL` est obligatoire. `.env` est chargé au démarrage ; SQLx applique les migrations avant d'ouvrir le port HTTP. `LUMI_SEED_DEMO=true` crée une fois le compte personnel `demo@lumi.local` / `lumi-demo`, sans modifier un compte existant. Désactiver cette option hors développement.
+
+La première migration est conservée pour ne pas invalider les bases où elle a déjà été appliquée. La seconde supprime les tables widgets/dashboard, convertit les anciens profils `personal`/`client` en `perso`, les permissions `administrator` en `admin`, et attribue `employe` aux membres d'entreprises existantes. Les anciennes sessions sont supprimées afin d'imposer une connexion avec rôle. Les comptes et les entreprises sont conservés.
+
+Swagger est disponible sur `/api/docs`. Le frontend possède un formulaire de connexion/inscription avec choix de profil. L'affichage des widgets est suspendu ; leur composant existant reste disponible pour une reprise ultérieure. Aucune API de widgets n'est exposée.
+
+## Vérifications
+
+```bash
+npm test
+cargo clippy --manifest-path backend/Cargo.toml --all-targets -- -D warnings
+npm run build -w frontend
+```
+
+Les tests SQLx utilisent `DATABASE_URL` (environnement ou `.env`) et créent des bases isolées : le compte PostgreSQL de test doit disposer du droit de créer des bases. Ils vérifient les inscriptions, les rôles, la persistance et la révocation des sessions, les validations et les inscriptions concurrentes avec le même e-mail.
