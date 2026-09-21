@@ -486,6 +486,16 @@ export async function resumePlayback() {
 }
 
 /**
+ * Seek to a position in the currently playing track.
+ * Endpoint: PUT /v1/me/player/seek
+ * Scope: user-modify-playback-state
+ */
+export async function seekPlayback(positionMs) {
+  const query = new URLSearchParams({ position_ms: String(Math.max(0, Math.round(positionMs))) });
+  return spotifyFetch(`/me/player/seek?${query.toString()}`, { method: 'PUT' });
+}
+
+/**
  * Skip to the next track in the user's queue.
  * Endpoint: POST /v1/me/player/next
  * Scope: user-modify-playback-state

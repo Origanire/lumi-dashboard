@@ -7,6 +7,7 @@ import {
   getSpotifyRedirectUri,
   pausePlayback,
   resumePlayback,
+  seekPlayback,
   skipToNext,
   skipToPrevious,
   checkTracksSaved,
@@ -106,10 +107,7 @@ export default function SpotifyNowPlayingWidget({ widget }) {
   const progressRef = useRef(null);
   const timerRef = useRef(null);
 
-  // Compact mode: widget width < 4 columns
-  const isCompact = widget.width < 4;
-
-  const refreshInterval = Math.max(5, Number(widget.refreshInterval) || 10);
+  const refreshInterval = 1;
 
   /* auth change listener */
   useEffect(() => {
@@ -188,6 +186,16 @@ export default function SpotifyNowPlayingWidget({ widget }) {
     } finally {
       setActionPending(false);
       setTimeout(fetchPlayback, 800);
+    }
+  }
+
+  async function handleSeek(event) {
+    const positionMs = Number(event.target.value);
+    setLocalProgress(positionMs);
+    try {
+      await seekPlayback(positionMs);
+    } catch (err) {
+      setError(err.message);
     }
   }
 
@@ -287,21 +295,6 @@ export default function SpotifyNowPlayingWidget({ widget }) {
         <small className="spotify-redirect-hint">
           Redirect URI : <code>{getSpotifyRedirectUri()}</code>
         </small>
-        {error && <span className="spotify-error-message">{error}</span>}
-      </div>
-    );
-  }
-
-  /* ─── Rendu : erreur ─── */
-  if (error && !playback) {
-    return (
-      <div className="spotify-widget-content spotify-error-state">
-        <div className="spotify-badge-header"><SpotifyLogo size={16} /><span>Spotify</span></div>
-        <p className="spotify-error-text">{error}</p>
-        <div className="spotify-actions-inline">
-          <button type="button" className="button button-light spotify-retry-btn" onClick={fetchPlayback}>Réessayer</button>
-          <button type="button" className="spotify-link-btn" onClick={() => clearStoredAuth()}>Déconnecter</button>
-        </div>
       </div>
     );
   }
@@ -332,192 +325,45 @@ export default function SpotifyNowPlayingWidget({ widget }) {
   const artists = (track.artists || []).map(a => a.name).join(', ');
   const trackUrl = track.external_urls?.spotify || 'https://open.spotify.com';
   const duration = track.duration_ms || 1;
-  const progressPercent = Math.min(100, (localProgress / duration) * 100);
 
-  /* ─── MODE COMPACT (width < 4) ─── */
-  if (isCompact) {
-    return (
-      <div className="spotify-widget-content spotify-playing spotify-compact">
-        {/* Pochette tournante */}
-        <div className={`spotify-vinyl-wrap ${isPlaying ? 'spinning' : ''}`}>
-          {albumImage
-            ? <img src={albumImage} alt={track.name} className="spotify-vinyl-cover" />
-            : <div className="spotify-vinyl-placeholder"><SpotifyLogo size={22} /></div>
-          }
-          <div className="spotify-vinyl-hole" />
-        </div>
-
-        {/* Contrôles compacts */}
-        <div className="spotify-compact-controls">
-          <button
-            type="button"
-            className="spotify-ctrl-btn"
-            onClick={handlePrev}
-            disabled={actionPending}
-            aria-label="Titre précédent"
-          >
-            <IconPrev />
-          </button>
-          <button
-            type="button"
-            className={`spotify-ctrl-btn spotify-ctrl-play ${isPlaying ? 'is-playing' : ''}`}
-            onClick={handlePlayPause}
-            disabled={actionPending}
-            aria-label={isPlaying ? 'Pause' : 'Lecture'}
-          >
-            {isPlaying ? <IconPause /> : <IconPlay />}
-          </button>
-          <button
-            type="button"
-            className="spotify-ctrl-btn"
-            onClick={handleNext}
-            disabled={actionPending}
-            aria-label="Titre suivant"
-          >
-            <IconNext />
-          </button>
-        </div>
-
-        {/* Barre de progression */}
-        <div className="spotify-progress-container" aria-label="Progression">
-          <div className="spotify-progress-bar" style={{ width: `${progressPercent}%` }} />
-        </div>
-        {error && <span className="spotify-error-message">{error}</span>}
-      </div>
-    );
-  }
-
-  /* ─── MODE COMPLET ─── */
   return (
-    <div className="spotify-widget-content spotify-playing">
-      {/* Header avec pochette tournante + infos */}
-      <div className="spotify-track-row">
-        <div className={`spotify-vinyl-wrap ${isPlaying ? 'spinning' : ''}`}>
-          {albumImage
-            ? <img src={albumImage} alt={track.name} className="spotify-vinyl-cover" />
-            : <div className="spotify-vinyl-placeholder"><SpotifyLogo size={18} /></div>
-          }
-          <div className="spotify-vinyl-hole" />
+    <div className="main-music-card">
+      <div className="track-info">
+        <a href={trackUrl} target="_blank" rel="noreferrer noopener" className="album-art" title="Ouvrir le morceau sur Spotify">
+          {albumImage && <img src={albumImage} alt={track.album?.name || track.name} />}
+        </a>
+        <div className="track-details">
+          <a href={trackUrl} target="_blank" rel="noreferrer noopener" className="track-title" title={track.name}>{track.name}</a>
+          <a href={track.artists?.[0]?.external_urls?.spotify || trackUrl} target="_blank" rel="noreferrer noopener" className="artist-name" title={artists}>{artists}</a>
         </div>
-
-        <div className="spotify-track-details">
-          <div className="spotify-status-indicator">
-            <span className={`spotify-indicator-dot ${isPlaying ? 'is-live' : 'is-paused'}`} />
-            <span>{isPlaying ? 'Lecture en cours' : 'En pause'}</span>
-            {loading && <span className="spotify-pulse-dot" style={{ marginLeft: 4 }} />}
-          </div>
-          <a
-            href={trackUrl}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="spotify-track-title"
-            title={track.name}
-          >
-            {track.name}
-          </a>
-          <span className="spotify-track-artist" title={artists}>{artists}</span>
+        <div className="volume-bars" aria-label={isPlaying ? 'Lecture en cours' : 'Lecture en pause'}>
+          {[0, 1, 2, 3, 4].map((bar) => <span key={bar} className="bar" style={{ '--delay': `${bar * 0.12}s`, animationPlayState: isPlaying ? 'running' : 'paused' }} />)}
         </div>
       </div>
 
-      {/* Barre de progression avec temps */}
-      <div className="spotify-progress-row">
-        <span className="spotify-time">{formatMs(localProgress)}</span>
-        <div
-          className="spotify-progress-container"
-          aria-label="Progression du morceau"
-          style={{ flex: 1 }}
-        >
-          <div className="spotify-progress-bar" style={{ width: `${progressPercent}%` }} />
-        </div>
-        <span className="spotify-time">{formatMs(duration)}</span>
+      <div className="playback-controls">
+        <div className="time-info"><span>{formatMs(localProgress)}</span><span>{formatMs(duration)}</span></div>
+        <input className="progress-bar" type="range" min="0" max={duration} value={Math.min(localProgress, duration)} onChange={handleSeek} aria-label="Position dans le morceau" />
       </div>
 
-      {/* Contrôles principaux */}
-      <div className="spotify-controls">
-        <button type="button" className="spotify-ctrl-btn" onClick={handlePrev} disabled={actionPending} aria-label="Titre précédent" title="Précédent">
-          <IconPrev />
-        </button>
-        <button
-          type="button"
-          className={`spotify-ctrl-btn spotify-ctrl-play ${isPlaying ? 'is-playing' : ''}`}
-          onClick={handlePlayPause}
-          disabled={actionPending}
-          aria-label={isPlaying ? 'Pause' : 'Lecture'}
-          title={isPlaying ? 'Pause' : 'Lecture'}
-        >
-          {isPlaying ? <IconPause /> : <IconPlay />}
-        </button>
-        <button type="button" className="spotify-ctrl-btn" onClick={handleNext} disabled={actionPending} aria-label="Titre suivant" title="Suivant">
-          <IconNext />
-        </button>
-
-        {/* Actions secondaires */}
-        <div className="spotify-secondary-actions">
-          <button
-            type="button"
-            className={`spotify-ctrl-btn spotify-like-btn ${isLiked ? 'liked' : ''}`}
-            onClick={handleLike}
-            disabled={actionPending}
-            aria-label={isLiked ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-            title={isLiked ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-          >
-            <IconHeart filled={isLiked} />
-          </button>
-          <div className="spotify-playlist-wrap">
-            <button
-              type="button"
-              className="spotify-ctrl-btn"
-              onClick={handleOpenPlaylistModal}
-              disabled={actionPending}
-              aria-label="Ajouter à une playlist"
-              title="Ajouter à une playlist"
-            >
-              <IconPlaylist />
-            </button>
-
-            {/* Dropdown Playlist */}
-            {showPlaylistModal && (
-              <div className="spotify-playlist-dropdown" role="dialog" aria-label="Choisir une playlist">
-                <div className="spotify-playlist-header">
-                  <span>Ajouter à une playlist</span>
-                  <button type="button" className="spotify-playlist-close" onClick={() => setShowPlaylistModal(false)} aria-label="Fermer">×</button>
-                </div>
-                {playlistLoading
-                  ? <div className="spotify-playlist-loading">Chargement…</div>
-                  : (
-                    <ul className="spotify-playlist-list">
-                      {playlists.map(pl => (
-                        <li key={pl.id}>
-                          <button
-                            type="button"
-                            className={`spotify-playlist-item ${playlistSuccess === pl.id ? 'added' : ''}`}
-                            onClick={() => handleAddToPlaylist(pl.id)}
-                          >
-                            {playlistSuccess === pl.id ? '✓ Ajouté !' : pl.name}
-                          </button>
-                        </li>
-                      ))}
-                      {playlists.length === 0 && <li className="spotify-empty-list">Aucune playlist</li>}
-                    </ul>
-                  )
-                }
-              </div>
-            )}
-          </div>
+      <div className="button-row">
+        <button type="button" className="control-button" onClick={handleLike} disabled={actionPending} aria-label={isLiked ? 'Retirer des favoris' : 'Ajouter aux favoris'} title={isLiked ? 'Retirer des favoris' : 'Ajouter aux favoris'}><IconHeart filled={isLiked} /></button>
+        <div className="main-control-btns">
+          <button type="button" className="control-button" onClick={handlePrev} disabled={actionPending} aria-label="Titre précédent" title="Titre précédent"><IconPrev /></button>
+          <button type="button" className="control-button play-pause-button" onClick={handlePlayPause} disabled={actionPending} aria-label={isPlaying ? 'Pause' : 'Lecture'} title={isPlaying ? 'Pause' : 'Lecture'}>{isPlaying ? <IconPause /> : <IconPlay />}</button>
+          <button type="button" className="control-button" onClick={handleNext} disabled={actionPending} aria-label="Titre suivant" title="Titre suivant"><IconNext /></button>
+        </div>
+        <div className="spotify-playlist-wrap">
+          <button type="button" className="control-button" onClick={handleOpenPlaylistModal} disabled={actionPending} aria-label="Ajouter à une playlist" title="Ajouter à une playlist"><IconPlaylist /></button>
+          {showPlaylistModal && (
+            <div className="spotify-playlist-dropdown" role="dialog" aria-label="Choisir une playlist">
+              <div className="spotify-playlist-header"><span>Ajouter à une playlist</span><button type="button" className="spotify-playlist-close" onClick={() => setShowPlaylistModal(false)} aria-label="Fermer">×</button></div>
+              {playlistLoading ? <div className="spotify-playlist-loading">Chargement…</div> : <ul className="spotify-playlist-list">{playlists.map(pl => <li key={pl.id}><button type="button" className={`spotify-playlist-item ${playlistSuccess === pl.id ? 'added' : ''}`} onClick={() => handleAddToPlaylist(pl.id)}>{playlistSuccess === pl.id ? '✓ Ajouté !' : pl.name}</button></li>)}{playlists.length === 0 && <li className="spotify-empty-list">Aucune playlist</li>}</ul>}
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Footer attribution Spotify */}
-      <div className="spotify-footer">
-        <div className="spotify-attribution">
-          <SpotifyLogo size={13} />
-          <a href={trackUrl} target="_blank" rel="noreferrer noopener">Spotify ↗</a>
-        </div>
-        <button type="button" className="spotify-link-btn" onClick={() => clearStoredAuth()} style={{ fontSize: 9 }}>
-          Déconnecter
-        </button>
-      </div>
-      {error && <span className="spotify-error-message">{error}</span>}
+      <div className="spotify-player-footer"><SpotifyLogo size={13} /><a href={trackUrl} target="_blank" rel="noreferrer noopener">Spotify ↗</a><button type="button" className="spotify-link-btn" onClick={() => clearStoredAuth()}>Déconnecter</button></div>
     </div>
   );
 }

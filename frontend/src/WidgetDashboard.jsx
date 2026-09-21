@@ -161,7 +161,7 @@ function WidgetCard({
   };
   return (
     <article
-      className={`widget-card widget-${type.color}`}
+      className={`widget-card widget-${type.color} ${widget.type === 'spotify_player' ? `spotify-widget-card spotify-widget-width-${widget.width} spotify-widget-height-${widget.height}` : ''}`}
       style={{
         gridColumn: `${widget.x} / span ${widget.width}`,
         gridRow: `${widget.y} / span ${widget.height}`,
