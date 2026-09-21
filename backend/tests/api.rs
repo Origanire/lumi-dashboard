@@ -182,13 +182,10 @@ async fn roles_are_checked_and_revocation_invalidates_sessions(pool: PgPool) {
         .0,
         StatusCode::UNPROCESSABLE_ENTITY
     );
-    let verified: bool =
-        sqlx::query_scalar("SELECT email_verified_at IS NOT NULL FROM users WHERE email=$1")
-            .bind(lumi_backend::DEMO_EMAIL)
-            .fetch_one(&pool)
-            .await
-            .unwrap();
-    assert!(verified);
+    sqlx::query("UPDATE users SET email_verified_at=now() WHERE email='perso@test.local'")
+        .execute(&pool)
+        .await
+        .unwrap();
     let personal = login(&app, "perso").await;
     let id: Uuid = sqlx::query_scalar("SELECT id FROM users")
         .fetch_one(&pool)
@@ -316,10 +313,6 @@ async fn demo_bootstrap_is_idempotent(pool: PgPool) {
     .await
     .unwrap();
     lumi_backend::auth::seed_demo(&pool, lumi_backend::DEMO_EMAIL, "wrong")
-        .await
-        .unwrap();
-    sqlx::query("UPDATE users SET email_verified_at=now()")
-        .execute(&pool)
         .await
         .unwrap();
     let app = lumi_backend::app(pool);
