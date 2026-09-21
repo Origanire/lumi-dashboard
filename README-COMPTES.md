@@ -16,7 +16,7 @@ L'employé et le compte entreprise sont associés à **Atelier Lumi — Démonst
 Depuis la racine, avec `DATABASE_URL` configurée dans `.env` :
 
 ```bash
-docker compose up -d --wait postgres
+npm run services
 npm run seed:test
 npm run dev
 ```
@@ -25,7 +25,7 @@ La commande `seed:test` applique les migrations puis crée les quatre comptes et
 
 ## Se connecter
 
-Ouvrir http://localhost:5174/, cliquer sur **Se connecter**, puis saisir l'e-mail et le mot de passe. Aucun rôle n'est demandé à la connexion.
+Ouvrir http://localhost:5174/, cliquer sur **Se connecter**, puis saisir l'e-mail et le mot de passe. Aucun rôle n'est demandé à la connexion. Ces comptes de démonstration sont prévalidés : aucune confirmation par e-mail n'est nécessaire.
 
 Le serveur détermine le rôle depuis la base. Pour un compte ayant plusieurs rôles, la priorité est : administrateur, entreprise, employé, personnel. Les quatre comptes ci-dessus n'ont chacun qu'un rôle.
 

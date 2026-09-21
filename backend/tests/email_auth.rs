@@ -474,3 +474,32 @@ async fn expired_magic_and_reset_are_rejected(pool: PgPool) {
         );
     }
 }
+
+#[sqlx::test]
+async fn demo_bootstrap_repairs_only_matching_demo_credentials(pool: PgPool) {
+    let (app, _) = setup(&pool);
+    register(&app, "demo@test.local").await;
+    lumi_backend::auth::seed_demo(&pool, "demo@test.local", lumi_backend::DEMO_PASSWORD_HASH)
+        .await
+        .unwrap();
+    assert_eq!(
+        login(&app, "demo@test.local", "initial-password").await.0,
+        StatusCode::FORBIDDEN
+    );
+    let hash: String =
+        sqlx::query_scalar("SELECT password_hash FROM users WHERE email='demo@test.local'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    lumi_backend::auth::seed_demo(&pool, "demo@test.local", &hash)
+        .await
+        .unwrap();
+    let (status, body) = login(&app, "demo@test.local", "initial-password").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        request(&app, "/api/auth/me", Value::Null, body["token"].as_str())
+            .await
+            .0,
+        StatusCode::OK
+    );
+}
