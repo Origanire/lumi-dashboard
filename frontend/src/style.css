@@ -1961,6 +1961,9 @@ body {
 .spotify-widget-card .drag-hint {
   display: none;
 }
+.spotify-widget-card.is-arranging .widget-card-header {
+  display: flex;
+}
 .widget-mint {
   background: var(--surface);
   border-color: var(--line);

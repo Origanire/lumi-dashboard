@@ -53,7 +53,7 @@ export const WIDGET_TYPES = {
     eyebrow: 'En cours d’écoute',
     icon: '♫',
     color: 'spotify',
-    defaultWidth: 6,
+    defaultWidth: 2,
     defaultHeight: 2,
   },
   spotify_top: {

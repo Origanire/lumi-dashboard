@@ -182,7 +182,10 @@ export async function handleSpotifyCallback(customClientId) {
     throw new Error('Code verifier PKCE introuvable. Veuillez réessayer.');
   }
 
-  return exchangeCodeForToken(activeClientId, code, verifier);
+  const authData = await exchangeCodeForToken(activeClientId, code, verifier);
+  const dashboardUrl = `${window.location.origin}/dashboard`;
+  window.history.replaceState({}, document.title, dashboardUrl);
+  return authData;
 }
 
 /**
