@@ -1,12 +1,6 @@
 import React from 'react';
+import CalendarWidget from './calendar/CalendarWidget';
 
-export default function AgendaWidget({ widget }) {
-  return (
-    <div className="agenda-content">
-      <span className="agenda-time">{widget.time || '14:30'}</span>
-      <strong>{widget.nextEvent || 'Prochain événement'}</strong>
-      <small>{widget.detail || 'Aucun détail précisé'}</small>
-    </div>
-  );
+export default function AgendaWidget() {
+  return <CalendarWidget mode="month" />;
 }
-
