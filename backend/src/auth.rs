@@ -347,7 +347,7 @@ pub async fn logout(
 pub async fn seed_demo(pool: &PgPool, email: &str, password_hash: &str) -> Result<(), sqlx::Error> {
     let mut tx = pool.begin().await?;
     let id: Option<Uuid> = sqlx::query_scalar(
-        "INSERT INTO users (id, email, name, password_hash) VALUES ($1,$2,'Utilisateur Lumi',$3)
+        "INSERT INTO users (id, email, name, password_hash, email_verified_at) VALUES ($1,$2,'Utilisateur Lumi',$3,now())
          ON CONFLICT DO NOTHING RETURNING id",
     )
     .bind(Uuid::new_v4())
@@ -361,5 +361,11 @@ pub async fn seed_demo(pool: &PgPool, email: &str, password_hash: &str) -> Resul
             .execute(&mut *tx)
             .await?;
     }
+    // Only bootstrap the configured demo identity, never an unrelated existing account.
+    sqlx::query("UPDATE users SET email_verified_at=COALESCE(email_verified_at,now()) WHERE lower(email)=lower($1) AND password_hash=$2")
+        .bind(email.trim())
+        .bind(password_hash)
+        .execute(&mut *tx)
+        .await?;
     tx.commit().await
 }
