@@ -59,7 +59,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let hash =
                 tokio::task::spawn_blocking(move || bcrypt::hash(password, bcrypt::DEFAULT_COST))
                     .await??;
-            sqlx::query("INSERT INTO users (id,email,name,password_hash) VALUES ($1,$2,$3,$4)")
+            sqlx::query("INSERT INTO users (id,email,name,password_hash,email_verified_at) VALUES ($1,$2,$3,$4,now())")
                 .bind(id)
                 .bind(email)
                 .bind(name)
@@ -73,6 +73,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .await?;
             id
         };
+        sqlx::query(
+            "UPDATE users SET email_verified_at=COALESCE(email_verified_at,now()) WHERE id=$1",
+        )
+        .bind(id)
+        .execute(&mut *tx)
+        .await?;
         if role == "entreprise" || role == "employe" {
             members.push(id);
         }

@@ -182,10 +182,13 @@ async fn roles_are_checked_and_revocation_invalidates_sessions(pool: PgPool) {
         .0,
         StatusCode::UNPROCESSABLE_ENTITY
     );
-    sqlx::query("UPDATE users SET email_verified_at=now()")
-        .execute(&pool)
-        .await
-        .unwrap();
+    let verified: bool =
+        sqlx::query_scalar("SELECT email_verified_at IS NOT NULL FROM users WHERE email=$1")
+            .bind(lumi_backend::DEMO_EMAIL)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert!(verified);
     let personal = login(&app, "perso").await;
     let id: Uuid = sqlx::query_scalar("SELECT id FROM users")
         .fetch_one(&pool)
