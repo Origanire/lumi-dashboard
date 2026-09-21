@@ -1951,6 +1951,13 @@ body {
   border-color: var(--line);
   box-shadow: none;
 }
+.widget-card.widget-spotify {
+  align-items: center;
+}
+.widget-card.widget-spotify > .spotify-widget-content {
+  width: min(100%, 640px);
+  margin-inline: auto;
+}
 .widget-mint {
   background: var(--surface);
   border-color: var(--line);
