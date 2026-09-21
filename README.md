@@ -88,6 +88,19 @@ Pour recevoir les messages dans une vraie boîte, renseigner dans `.env` les par
 
 Le lien de connexion remplace le mot de passe ; ce parcours n’est pas une seconde étape après le mot de passe (A2F). Les liens de confirmation, connexion et réinitialisation expirent respectivement après 24 heures, 15 minutes et 30 minutes et ne sont utilisables qu’une fois.
 
+### Widgets Google Calendar
+
+Deux widgets permettent de consulter les échéances du mois et le planning semaine/jour, puis de créer des événements avec priorité, labels techniques et échéance. Ils utilisent l’agenda Google principal du compte connecté. Configurer `VITE_GOOGLE_CLIENT_ID` dans `.env` puis redémarrer le frontend : voir le [guide Google Calendar](frontend/docs/google-calendar.md).
+
+Pour connecter un agenda en tant qu'utilisateur :
+
+1. Se connecter à Lumi.
+2. Cliquer sur **Ajouter un widget**, puis choisir un widget **Agenda**.
+3. Cliquer sur **Connecter Google Calendar**.
+4. Choisir le compte Google à utiliser dans la fenêtre Google et accepter l'accès aux événements.
+
+La connexion est valable pour la session de la page. Elle n'enregistre ni mot de passe Google ni secret dans Lumi. Si le bouton n'est pas disponible, l'application doit d'abord être configurée par la personne qui la déploie, comme indiqué dans le [guide complet Google Calendar](frontend/docs/google-calendar.md).
+
 ### Documentation interactive — Swagger UI
 
 Avec `npm run dev` lancé, ouvrir http://localhost:5174/api/docs (ou directement http://127.0.0.1:3001/api/docs).
