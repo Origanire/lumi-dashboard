@@ -478,11 +478,15 @@ p {
   border-radius: 4px;
 }
 .dashboard-main {
-  max-width: 1400px;
-  margin: auto;
-  padding: 42px 40px;
+  width: calc(100% - 2vw);
+  max-width: none;
+  margin-inline: 1vw;
+  padding: 42px 0;
 }
 .dashboard-intro {
+  max-width: 1400px;
+  margin-inline: auto;
+  padding-inline: 40px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1134,7 +1138,7 @@ p {
   }
 
   .dashboard-main {
-    padding: 32px 24px;
+    padding: 32px 0;
   }
 
   .widget-workspace-header {
@@ -1184,13 +1188,14 @@ p {
   }
 
   .dashboard-main {
-    padding: 26px 20px;
+    padding: 26px 0;
   }
   .dashboard-intro h1,
   .account-page h1 {
     font-size: 28px;
   }
   .dashboard-intro {
+    padding-inline: 24px;
     padding-bottom: 25px;
   }
   .greeting-symbol {
@@ -1914,10 +1919,13 @@ body {
   font-weight: 400;
 }
 .dashboard-main {
-  max-width: 1400px;
-  padding: 48px 40px;
+  width: calc(100% - 2vw);
+  max-width: none;
+  margin-inline: 1vw;
+  padding: 48px 0;
 }
 .dashboard-intro {
+  padding-inline: 40px;
   padding-bottom: 30px;
 }
 .dashboard-intro h1,
@@ -2148,11 +2156,14 @@ body {
     display: none;
   }
   .dashboard-main {
-    padding: 28px 20px;
+    padding: 28px 0;
   }
   .dashboard-intro h1,
   .account-page h1 {
     font-size: 28px;
+  }
+  .dashboard-intro {
+    padding-inline: 20px;
   }
   .greeting-symbol {
     width: 48px;
