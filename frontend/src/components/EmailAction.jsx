@@ -1,3 +1,4 @@
+import { SESSION_TOKEN_KEY } from '../config';
 import React, { useState } from 'react';
 
 export function readEmailAction() {
@@ -30,8 +31,8 @@ export default function EmailAction({ action, api, onLogin, onDone }) {
     setBusy(true);
     try {
       const data = await api(copy[3], { method: 'POST', body: payload });
-      if (action.purpose === 'magic') { sessionStorage.setItem('lumi_token', data.token); onLogin(data.user); }
-      else { if (action.purpose === 'reset') sessionStorage.removeItem('lumi_token'); setSuccess(data.message); }
+      if (action.purpose === 'magic') { sessionStorage.setItem(SESSION_TOKEN_KEY, data.token); onLogin(data.user); }
+      else { if (action.purpose === 'reset') sessionStorage.removeItem(SESSION_TOKEN_KEY); setSuccess(data.message); }
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }
   }

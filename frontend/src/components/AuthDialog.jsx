@@ -1,7 +1,7 @@
+import { ROLE_LABELS, REGISTRATION_ROLES, SESSION_TOKEN_KEY } from '../config';
 import React, { useEffect, useState } from 'react';
 import Dialog from './Dialog';
 
-const ROLES = { perso: 'Personnel', employe: 'Employé', entreprise: 'Entreprise' };
 const MODES = {
   login: { title: 'Heureux de vous revoir.', description: 'Connectez-vous avec votre adresse e-mail confirmée.', action: 'Se connecter', path: '/auth/login' },
   register: { title: 'Un espace à vous.', description: 'Un e-mail vous permettra de confirmer votre adresse avant votre première connexion.', action: 'Créer mon compte', path: '/auth/register' },
@@ -38,7 +38,7 @@ export default function AuthDialog({ api, initialMode, onClose, onLogin }) {
     if (register) { payload.name = form.get('name'); payload.role = role; if (role === 'entreprise') payload.company_name = form.get('company_name'); }
     try {
       const data = await api(MODES[mode].path, { method: 'POST', body: payload });
-      if (mode === 'login') { sessionStorage.setItem('lumi_token', data.token); onLogin(data.user); }
+      if (mode === 'login') { sessionStorage.setItem(SESSION_TOKEN_KEY, data.token); onLogin(data.user); }
       else {
         setNotice(data.message);
         setCooldown(Date.now() + 60000); setNow(Date.now());
@@ -54,7 +54,7 @@ export default function AuthDialog({ api, initialMode, onClose, onLogin }) {
     <form onSubmit={submit} className="auth-form" aria-busy={busy}>
       <fieldset disabled={busy}>
         {register && <><label htmlFor="name">Votre nom</label><input id="name" name="name" autoComplete="name" maxLength="100" required />
-          <label htmlFor="role">Type de compte</label><select id="role" value={role} onChange={event => setRole(event.target.value)}>{Object.entries(ROLES).map(([key,label]) => <option key={key} value={key}>{label}</option>)}</select>
+          <label htmlFor="role">Type de compte</label><select id="role" value={role} onChange={event => setRole(event.target.value)}>{REGISTRATION_ROLES.map(key => <option key={key} value={key}>{ROLE_LABELS[key]}</option>)}</select>
           {role === 'entreprise' && <><label htmlFor="company">Nom de l’entreprise</label><input id="company" name="company_name" autoComplete="organization" maxLength="150" required /></>}
         </>}
         <label htmlFor="email">Adresse e-mail</label><input id="email" name="email" type="email" autoComplete="email" placeholder="vous@exemple.fr" maxLength="254" value={email} onChange={event => setEmail(event.target.value)} required />

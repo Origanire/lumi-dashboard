@@ -33,3 +33,34 @@ La connexion demande uniquement l'e-mail et le mot de passe. Le profil est chois
 Les notes sont éditables directement. Le minuteur peut être démarré, mis en pause et réinitialisé. **Organiser** active le déplacement par l'en-tête et le redimensionnement sur ordinateur. **Modifier** propose également les champs de taille et de position. La dernière suppression peut être annulée.
 
 La disposition et les notes sont sauvegardées localement, par compte. Les contenus d'exemple sont distingués des services synchronisés. Les animations respectent `prefers-reduced-motion`.
+
+## Organisation du frontend
+
+- `frontend/src/main.jsx` démarre React et importe `style.css`.
+- `frontend/src/App.jsx` contient les écrans et la gestion de session.
+- `frontend/src/api.js` centralise les requêtes vers le backend.
+- `frontend/src/config.js` partage les libellés des rôles, les rôles proposés à l'inscription et la clé de session.
+- `frontend/src/style.css` importe les modules de `frontend/src/styles/` dans l’ordre de la cascade.
+
+Pour personnaliser le thème, modifier les variables de `:root` dans `styles/tokens.css` : couleurs, `--font-body`, `--font-display`, `--font-mono`, `--radius-control` et `--radius-panel`. Les couleurs du mode nuit sont dans `:root[data-theme='dark']`. Les paramètres propres au lecteur Spotify restent sur `.main-music-card`, et les valeurs calculées (position des widgets, progression) restent pilotées par React. Les états interactifs restent locaux à leurs composants.
+
+### Modules CSS
+
+| Fichier dans `frontend/src/styles/` | Contenu |
+| --- | --- |
+| `tokens.css` | Police locale, variables globales et palettes jour/nuit |
+| `base.css` | Éléments HTML, typographie, accessibilité et utilitaires |
+| `components.css` | Identité, boutons et liens partagés |
+| `landing.css` | Accueil, aperçu et présentation des fonctionnalités |
+| `dashboard.css` | Structure et introduction du tableau de bord |
+| `widgets.css` | Grille, cartes, contenus des widgets et organisation |
+| `forms.css` | Dialogues, authentification et éditeur de widget |
+| `account.css` | Page du compte et informations utilisateur |
+| `session.css` | Chargement, messages de session et éléments masqués |
+| `responsive.css` | Adaptations communes aux écrans et réduction des animations |
+| `spotify.css` | États partagés de Spotify et meilleurs titres |
+| `theme.css` | Ajustements monochromes et navigation, avec leur responsive |
+| `email.css` | Vérification et actions par e-mail |
+| `spotify-player.css` | Lecteur Spotify, contrôles et formats compacts |
+
+Les imports de `style.css` conservent l’ordre historique des règles : ne pas les trier alphabétiquement. Certaines règles de `theme.css` complètent celles des modules ; vérifier ce fichier pour modifier leur apparence finale. Les chemins des ressources CSS sont relatifs au module qui les déclare. Importer uniquement `style.css` depuis React pour éviter les chargements multiples.
