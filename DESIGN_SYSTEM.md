@@ -64,3 +64,11 @@ Pour personnaliser le thème, modifier les variables de `:root` dans `styles/tok
 | `spotify-player.css` | Lecteur Spotify, contrôles et formats compacts |
 
 Les imports de `style.css` conservent l’ordre historique des règles : ne pas les trier alphabétiquement. Certaines règles de `theme.css` complètent celles des modules ; vérifier ce fichier pour modifier leur apparence finale. Les chemins des ressources CSS sont relatifs au module qui les déclare. Importer uniquement `style.css` depuis React pour éviter les chargements multiples.
+
+### Widgets adaptatifs
+
+`hooks/useWidgetSize.js` observe la taille réelle de chaque carte (y compris après redimensionnement ou changement de largeur de fenêtre). Les seuils sont centralisés : largeur étroite sous 300 px, très étroite sous 180 px ; hauteur compacte sous 240 px, très basse sous 160 px. Aucun contenu utilisateur n’est supprimé et les éléments masqués réapparaissent à l’agrandissement.
+
+`styles/widget-adaptive.css`, importé en dernier, adapte les six types de widgets : texte et contrôles flexibles, notes éditables, détails secondaires masqués, liste Spotify défilante, lecteur réduit jusqu’au titre et à lecture/pause. Les actions Modifier / Supprimer restent disponibles ; aux tailles extrêmes, le défilement permet d’atteindre les commandes qui ne peuvent pas tenir. Les données et états React sont conservés pendant le changement de format.
+
+Vérification des seuils et du nettoyage de l’observateur : `node --test frontend/tests/widget-size.test.mjs`.

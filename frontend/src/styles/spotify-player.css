@@ -75,28 +75,6 @@
   font-size: 10px;
 }
 .spotify-player-footer .spotify-link-btn { margin-left: auto; }
-.spotify-widget-height-1 .main-music-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-rows: minmax(0, 1fr) auto;
-  align-content: center;
-  gap: 6px 10px;
-  padding: 10px 14px;
-  border-radius: 22px;
-}
-.spotify-widget-height-1 .track-info { min-width: 0; min-height: 0; }
-.spotify-widget-height-1 .album-art { width: 54px; height: 54px; border-radius: 12px; }
-.spotify-widget-height-1 .track-title { font-size: 1em; }
-.spotify-widget-height-1 .artist-name { font-size: 0.8em; }
-.spotify-widget-height-1 .volume-bars { width: 28px; height: 24px; }
-.spotify-widget-height-1 .playback-controls { grid-column: 1 / -1; grid-row: 2; min-width: 0; }
-.spotify-widget-height-1 .button-row { grid-column: 2; grid-row: 1; gap: 2px; }
-.spotify-widget-height-1 .main-control-btns { gap: 2px; }
-.spotify-widget-height-1 .control-button { width: 30px; height: 30px; }
-.spotify-widget-height-1 .main-control-btns .control-button:nth-child(2) { width: 38px; height: 38px; }
-.spotify-widget-height-1 .button-row > .spotify-playlist-wrap,
-.spotify-widget-height-1 .button-row > .control-button:first-child,
-.spotify-widget-height-1 .spotify-player-footer { display: none; }
 @media (max-width: 420px) {
   .main-music-card { padding: 15px; border-radius: 24px; }
   .track-title { font-size: 1.05em; }

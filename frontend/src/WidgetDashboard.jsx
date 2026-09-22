@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Dialog from './components/Dialog';
+import useWidgetSize from './hooks/useWidgetSize';
 import {
   WIDGET_TYPES,
   WIDGET_CONFIG_KEYS,
@@ -154,6 +155,7 @@ function WidgetCard({
   arranging,
   onChange,
 }) {
+  const sizeRef = useWidgetSize();
   const type = WIDGET_TYPES[widget.type] || {
     label: widget.title,
     eyebrow: 'Widget',
@@ -161,7 +163,8 @@ function WidgetCard({
   };
   return (
     <article
-      className={`widget-card widget-${type.color} ${arranging ? 'is-arranging' : ''} ${widget.type === 'spotify_player' ? `spotify-widget-card spotify-widget-width-${widget.width} spotify-widget-height-${widget.height}` : ''}`}
+      ref={sizeRef}
+      className={`widget-card widget-${type.color} ${arranging ? 'is-arranging' : ''} ${widget.type === 'spotify_player' ? 'spotify-widget-card' : ''}`}
       style={{
         gridColumn: `${widget.x} / span ${widget.width}`,
         gridRow: `${widget.y} / span ${widget.height}`,
