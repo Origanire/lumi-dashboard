@@ -2256,6 +2256,16 @@ body {
 .calendar-day-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .calendar-day-heading h4 { margin: 0; font-size: 12px; text-transform: capitalize; }
 .calendar-day-heading h4 span { font-weight: 400; color: var(--muted); }
+.calendar-view-week { grid-template-columns: repeat(7, minmax(145px, 1fr)); overflow-x: auto; align-items: stretch; padding-bottom: 8px; min-height: 230px; }
+.calendar-view-week .calendar-day { min-width: 0; padding: 8px; }
+.calendar-view-week .calendar-day-heading { align-items: flex-start; border-bottom: 1px solid var(--line); padding-bottom: 10px; min-height: 76px; }
+.calendar-day-heading time { display: block; margin-top: 6px; color: var(--muted); font-size: 11px; font-weight: 400; }
+.calendar-day-heading .calendar-today-label { display: block; margin-top: 6px; font-size: 10px; }
+.calendar-day.is-today { background: color-mix(in srgb, var(--ink) 6%, var(--surface)); }
+.calendar-day.is-today .calendar-today-label { display: inline-block; background: var(--ink); color: var(--surface); padding: 3px 5px; border-radius: 3px; font-weight: 600; }
+.calendar-view-week .calendar-event { flex-direction: column; gap: 6px; }
+.calendar-view-week .calendar-event-date { flex-basis: auto; }
+.calendar-view-week .calendar-event-date span { display: block; margin-left: 0; }
 .calendar-footer { margin-top: auto; padding-top: 8px; color: var(--muted); font-size: 10px; }
 .calendar-footer a { margin-right: auto; color: inherit; }
 .calendar-footer button { border: none; font-size: 10px; }
