@@ -5,10 +5,12 @@ import { calendarRequest, listEvents } from './calendarClient';
 import { PRIORITIES, addDays, buildEvent, eventBounds, eventMetadata, eventsOnDay, fromDate, localDate, period } from './calendarModel';
 
 const dayFormat = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+const weekdayFormat = new Intl.DateTimeFormat('fr-FR', { weekday: 'long' });
+const shortDateFormat = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' });
 const dateFormat = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
 const timeFormat = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
-function EventRow({ event }) {
+function EventRow({ event, compact = false }) {
   const { start, end } = eventBounds(event);
   const { priority, labels, deadline } = eventMetadata(event);
   const allDay = !!event.start?.date;
@@ -16,7 +18,7 @@ function EventRow({ event }) {
   const multiple = localDate(start) !== localDate(lastDay);
   const safeLink = /^https:\/\/calendar\.google\.com\//.test(event.htmlLink || '') ? event.htmlLink : null;
   return <li className="calendar-event">
-    <div className="calendar-event-date">{dateFormat.format(start)}{multiple && ` → ${dateFormat.format(lastDay)}`}<span>{allDay ? 'Toute la journée' : `${timeFormat.format(start)} – ${timeFormat.format(end)}`}</span></div>
+    <div className="calendar-event-date">{!compact && <>{dateFormat.format(start)}{multiple && ` → ${dateFormat.format(lastDay)}`}</>}<span>{allDay ? 'Toute la journée' : `${timeFormat.format(start)} – ${timeFormat.format(end)}`}</span></div>
     <div className="calendar-event-main">
       {safeLink ? <a href={safeLink} target="_blank" rel="noopener noreferrer">{event.summary || 'Sans titre'} ↗</a> : <strong>{event.summary || 'Sans titre'}</strong>}
       {event.location && <small>{event.location}</small>}
@@ -148,9 +150,9 @@ export default function CalendarWidget({ mode = 'month' }) {
         {days.map(day => {
           const items = eventsOnDay(events, day);
           const today = localDate(day) === localDate(new Date(now));
-          return <section key={localDate(day)} className={`calendar-day ${today ? 'is-today' : ''}`} aria-label={dayFormat.format(day)}>
-            <div className="calendar-day-heading"><h4>{dayFormat.format(day)}{today && <span> Aujourd’hui</span>}</h4><button type="button" aria-label={`Ajouter un événement le ${dayFormat.format(day)}`} onClick={() => { setDate(day); setNotice(''); setCreating(true); }}>+</button></div>
-            {items.length ? <ul className="calendar-events">{items.map(event => <EventRow event={event} key={event.id} />)}</ul> : <p className="calendar-empty">Aucun événement</p>}
+          return <section key={localDate(day)} className={`calendar-day ${today ? 'is-today' : ''}`} aria-label={dayFormat.format(day)} aria-current={today ? 'date' : undefined}>
+            <div className="calendar-day-heading"><h4>{view === 'week' ? <>{weekdayFormat.format(day)}<time dateTime={localDate(day)}>{shortDateFormat.format(day)}</time></> : dayFormat.format(day)}{today && <span className="calendar-today-label">Aujourd’hui</span>}</h4><button type="button" aria-label={`Ajouter un événement le ${dayFormat.format(day)}`} onClick={() => { setDate(day); setNotice(''); setCreating(true); }}>+</button></div>
+            {items.length ? <ul className="calendar-events">{items.map(event => <EventRow event={event} compact={view === 'week'} key={event.id} />)}</ul> : <p className="calendar-empty">Aucun événement</p>}
           </section>;
         })}
       </div>}
