@@ -1,4 +1,5 @@
 import React from 'react';
+import GmailWidget, { GmailComposeWidget } from './gmail/GmailWidget';
 import WeatherWidget from './WeatherWidget';
 import AgendaWidget from './AgendaWidget';
 import FocusWidget from './FocusWidget';
@@ -16,6 +17,8 @@ export {
 };
 
 export const WIDGET_TYPES = {
+  gmail_unread: { label: 'Gmail · Non lus', eyebrow: 'Boîte de réception', icon: '✉', color: 'red', defaultWidth: 6, defaultHeight: 3 },
+  gmail_compose: { label: 'Gmail · Rédiger', eyebrow: 'Nouveau message', icon: '✎', color: 'red', defaultWidth: 2, defaultHeight: 1 },
   weather: {
     label: 'Météo',
     eyebrow: 'Conditions locales',
@@ -67,6 +70,8 @@ export const WIDGET_TYPES = {
 };
 
 export const WIDGET_CONFIG_KEYS = {
+  gmail_unread: ['type', 'title', 'gmailClientId', 'gmailLimit'],
+  gmail_compose: ['type', 'title', 'gmailAccount', 'gmailClientId'],
   weather: ['type', 'title', 'city'],
   agenda: ['type', 'title', 'nextEvent', 'time', 'detail'],
   focus: ['type', 'title', 'duration'],
@@ -77,6 +82,8 @@ export const WIDGET_CONFIG_KEYS = {
 
 export function WidgetContent({ widget, onChange }) {
   switch (widget.type) {
+    case 'gmail_unread': return <GmailWidget widget={widget} />;
+    case 'gmail_compose': return <GmailComposeWidget widget={widget} />;
     case 'weather':
       return <WeatherWidget widget={widget} />;
     case 'agenda':
@@ -95,6 +102,21 @@ export function WidgetContent({ widget, onChange }) {
 }
 
 export function WidgetEditorFields({ draft, update }) {
+  if (draft.type === 'gmail_unread') return <>
+    <label htmlFor="gmail-limit">Nombre de mails à afficher</label>
+    <input id="gmail-limit" type="number" min="1" max="20" required value={draft.gmailLimit ?? 5} onChange={event => update('gmailLimit', Number(event.target.value))} />
+    <p className="field-hint">Les derniers mails non lus de la boîte de réception. Actualisation chaque minute.</p>
+    <label htmlFor="gmail-client">Client ID Google (facultatif si configuré globalement)</label>
+    <input id="gmail-client" value={draft.gmailClientId || ''} onChange={event => update('gmailClientId', event.target.value)} placeholder="…apps.googleusercontent.com" />
+    <p className="field-hint">Connectez votre compte depuis le widget après sa création.</p>
+  </>;
+  if (draft.type === 'gmail_compose') return <>
+    <label htmlFor="gmail-compose-client">Client ID Google (facultatif si configuré globalement)</label>
+    <input id="gmail-compose-client" value={draft.gmailClientId || ''} onChange={event => update('gmailClientId', event.target.value)} placeholder="…apps.googleusercontent.com" />
+    <label htmlFor="gmail-account">Compte Gmail (facultatif)</label>
+    <input id="gmail-account" type="email" value={draft.gmailAccount || ''} onChange={event => update('gmailAccount', event.target.value)} placeholder="vous@gmail.com" />
+    <p className="field-hint">Rédigez dans Lumi et connectez le compte Gmail qui enverra votre message.</p>
+  </>;
   if (draft.type === 'weather') {
     return (
       <>
