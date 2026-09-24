@@ -164,7 +164,7 @@ function WidgetCard({
   return (
     <article
       ref={sizeRef}
-      className={`widget-card widget-${type.color} ${arranging ? 'is-arranging' : ''} ${widget.type === 'spotify_player' ? 'spotify-widget-card' : ''}`}
+      className={`widget-card widget-${type.color} ${arranging ? 'is-arranging' : ''} ${widget.type === 'spotify_player' ? 'spotify-widget-card' : ''} ${widget.type === 'gmail_compose' ? 'gmail-compose-card' : ''}`}
       style={{
         gridColumn: `${widget.x} / span ${widget.width}`,
         gridRow: `${widget.y} / span ${widget.height}`,
@@ -316,7 +316,7 @@ function WidgetEditor({ widget, mode, onClose, onSave }) {
                 id="widget-width"
                 type="number"
                 min="1"
-                max="12"
+                max={type.maxWidth || 12}
                 value={draft.width}
                 onChange={(event) =>
                   update('width', Number(event.target.value))
@@ -329,7 +329,7 @@ function WidgetEditor({ widget, mode, onClose, onSave }) {
                 id="widget-height"
                 type="number"
                 min="1"
-                max="6"
+                max={type.maxHeight || 6}
                 value={draft.height}
                 onChange={(event) =>
                   update('height', Number(event.target.value))
@@ -400,7 +400,11 @@ export default function WidgetDashboard({ userId }) {
         ) &&
         new Set(saved.map((w) => w.id)).size === saved.length
       )
-        return saved;
+        return saved.map(widget => ({
+          ...widget,
+          width: Math.min(widget.width, WIDGET_TYPES[widget.type].maxWidth || 12),
+          height: Math.min(widget.height, WIDGET_TYPES[widget.type].maxHeight || 6),
+        }));
     } catch {
       /* Start with the default layout when storage is unavailable or invalid. */
     }
@@ -472,10 +476,11 @@ export default function WidgetDashboard({ userId }) {
               ...widget,
               width: Math.min(
                 12 - widget.x + 1,
+                WIDGET_TYPES[widget.type]?.maxWidth || 12,
                 Math.max(1, resizeSession.width + widthChange)
               ),
               height: Math.min(
-                6,
+                WIDGET_TYPES[widget.type]?.maxHeight || 6,
                 Math.max(1, resizeSession.height + heightChange)
               ),
             };
@@ -496,8 +501,8 @@ export default function WidgetDashboard({ userId }) {
   }, [resizeSession]);
 
   function saveWidget(widget) {
-    const width = Math.min(12, Math.max(1, Number(widget.width) || 1));
-    const height = Math.min(6, Math.max(1, Number(widget.height) || 1));
+    const width = Math.min(WIDGET_TYPES[widget.type]?.maxWidth || 12, Math.max(1, Number(widget.width) || 1));
+    const height = Math.min(WIDGET_TYPES[widget.type]?.maxHeight || 6, Math.max(1, Number(widget.height) || 1));
     const x = Math.min(13 - width, Math.max(1, Number(widget.x) || 1));
     const y = Math.min(100, Math.max(1, Number(widget.y) || 1));
     const nextWidget = { ...widget, x, y, width, height };
