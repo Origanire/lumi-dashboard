@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Dialog from './components/Dialog';
 import useWidgetSize from './hooks/useWidgetSize';
+import CalendarProvider from './widgets/calendar/CalendarProvider';
 import {
   WIDGET_TYPES,
   WIDGET_CONFIG_KEYS,
@@ -28,14 +29,11 @@ const INITIAL_WIDGETS = [
   {
     id: 2,
     type: 'agenda',
-    title: 'Agenda',
+    title: 'Échéances du mois',
     x: 7,
     y: 1,
     width: 6,
     height: 2,
-    nextEvent: 'Revue produit',
-    time: '14:30',
-    detail: 'Exemple · à personnaliser',
   },
   {
     id: 3,
@@ -379,6 +377,10 @@ function WidgetEditor({ widget, mode, onClose, onSave }) {
 }
 
 export default function WidgetDashboard({ userId }) {
+  return <CalendarProvider key={userId}><DashboardWidgets key={userId} userId={userId} /></CalendarProvider>;
+}
+
+function DashboardWidgets({ userId }) {
   const storageKey = `lumi_dashboard_v1_${userId}`;
   const [storageError, setStorageError] = useState('');
   const [widgets, setWidgets] = useState(() => {
