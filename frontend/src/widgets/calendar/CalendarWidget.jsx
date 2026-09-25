@@ -1,12 +1,10 @@
 import React, { useEffect, useId, useState } from 'react';
 import Dialog from '../../components/Dialog';
+import Timetable from './Timetable';
 import { useCalendar } from './CalendarProvider';
 import { calendarRequest, listEvents } from './calendarClient';
-import { PRIORITIES, addDays, buildEvent, eventBounds, eventMetadata, eventsOnDay, fromDate, localDate, period } from './calendarModel';
+import { PRIORITIES, addDays, buildEvent, eventBounds, eventMetadata, fromDate, isLongEvent, localDate, longEventsByDeadline, period } from './calendarModel';
 
-const dayFormat = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
-const weekdayFormat = new Intl.DateTimeFormat('fr-FR', { weekday: 'long' });
-const shortDateFormat = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' });
 const dateFormat = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
 const timeFormat = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
@@ -28,10 +26,10 @@ function EventRow({ event, compact = false }) {
   </li>;
 }
 
-function EventForm({ date, onClose, onCreated }) {
+function EventForm({ date, timetable = false, onClose, onCreated }) {
   const calendar = useCalendar();
   const id = useId();
-  const [draft, setDraft] = useState({ title: '', startDate: localDate(date), endDate: localDate(date), startTime: '09:00', endTime: '10:00', allDay: false, priority: 'normal', labels: '', deadline: '', description: '', location: '' });
+  const [draft, setDraft] = useState({ title: '', startDate: localDate(date), endDate: localDate(timetable ? date : addDays(date, 6)), startTime: '09:00', endTime: '10:00', allDay: !timetable, priority: 'normal', labels: '', deadline: '', description: '', location: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const update = (key, value) => setDraft(current => ({ ...current, [key]: value }));
@@ -41,7 +39,7 @@ function EventForm({ date, onClose, onCreated }) {
     setError('');
     if (!calendar.auth) { setError('Reconnectez Google Calendar avant de créer un événement.'); return; }
     let body;
-    try { body = buildEvent(draft); } catch (err) { setError(err.message); return; }
+    try { body = buildEvent(timetable ? { ...draft, endDate: draft.startDate, allDay: false } : draft); if (!timetable && !isLongEvent(body)) throw new Error('Un événement doit durer au moins 7 jours. Pour une activité quotidienne, utilisez l’emploi du temps.'); } catch (err) { setError(err.message); return; }
     setBusy(true);
     try {
       await calendarRequest(calendar.auth.token, new URLSearchParams({ sendUpdates: 'none' }), { body });
@@ -57,24 +55,24 @@ function EventForm({ date, onClose, onCreated }) {
   }
   return <Dialog titleId={`${id}-heading`} className="calendar-dialog" onClose={() => { if (!busy) onClose(); }}>
     <span className="eyebrow">Google Calendar · Agenda principal</span>
-    <h2 id={`${id}-heading`}>Nouvel événement</h2>
-    <p className="muted">Choisissez une date, ce mois-ci ou dans une autre année.</p>
+    <h2 id={`${id}-heading`}>{timetable ? 'Nouveau créneau' : 'Nouvel événement'}</h2>
+    <p className="muted">{timetable ? 'Un cours ou une activité, avec un début et une fin le même jour.' : 'Un événement de 7 jours minimum, classé selon son échéance.'}</p>
     <form onSubmit={submit} className="calendar-form" aria-busy={busy}>
       <fieldset disabled={busy}>
-        {field('title', 'Nom de l’événement', 'text', { required: true, maxLength: 150, autoFocus: true })}
-        <label className="calendar-checkbox"><input type="checkbox" checked={draft.allDay} onChange={e => update('allDay', e.target.checked)} />Toute la journée</label>
+        {field('title', timetable ? 'Nom du créneau' : 'Nom de l’événement', 'text', { required: true, maxLength: 150, autoFocus: true })}
+        {!timetable && <label className="calendar-checkbox"><input type="checkbox" checked={draft.allDay} onChange={e => update('allDay', e.target.checked)} />Toute la journée</label>}
         <div className="calendar-form-grid">
           {field('startDate', 'Date de début', 'date', { required: true })}
-          {field('endDate', draft.allDay ? 'Dernier jour inclus' : 'Date de fin', 'date', { required: true, min: draft.startDate })}
+          {!timetable && field('endDate', draft.allDay ? 'Dernier jour inclus' : 'Date de fin', 'date', { required: true, min: draft.startDate })}
           {!draft.allDay && <>{field('startTime', 'Heure de début', 'time', { required: true })}{field('endTime', 'Heure de fin', 'time', { required: true })}</>}
-          <div className="calendar-select-field"><label htmlFor={`${id}-priority`}>Priorité</label><select id={`${id}-priority`} value={draft.priority} onChange={e => update('priority', e.target.value)}>{Object.entries(PRIORITIES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
-          {field('deadline', 'Échéance (facultative)', 'date')}
+          {!timetable && <div className="calendar-select-field"><label htmlFor={`${id}-priority`}>Priorité</label><select id={`${id}-priority`} value={draft.priority} onChange={e => update('priority', e.target.value)}>{Object.entries(PRIORITIES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>}
+          {!timetable && field('deadline', 'Échéance (facultative)', 'date')}
         </div>
-        {field('labels', 'Labels techniques', 'text', { maxLength: 200, placeholder: 'frontend, backend, déploiement…' })}
-        <small className="muted">Séparez les labels par une virgule. Sans échéance, la fin de l’événement est utilisée.</small>
+        {!timetable && field('labels', 'Labels techniques', 'text', { maxLength: 200, placeholder: 'frontend, backend, déploiement…' })}
+        {!timetable && <small className="muted">Séparez les labels par une virgule. Sans échéance, la fin de l’événement est utilisée.</small>}
         {field('location', 'Lieu (facultatif)', 'text', { maxLength: 300 })}
         <label htmlFor={`${id}-description`}>Description<textarea id={`${id}-description`} value={draft.description} onChange={e => update('description', e.target.value)} rows="3" maxLength="3000" /></label>
-        <small className="muted">Fuseau horaire : {Intl.DateTimeFormat().resolvedOptions().timeZone}. Les priorités et labels sont visibles dans Lumi.</small>
+        <small className="muted">Fuseau horaire : {Intl.DateTimeFormat().resolvedOptions().timeZone}.{!timetable && ' Les priorités et labels sont visibles dans Lumi.'}</small>
         {error && <p className="feedback error" role="alert">{error}</p>}
         <button className="button button-dark" type="submit" disabled={busy || !calendar.auth}>{busy ? 'Création…' : 'Créer dans Google Calendar'}</button>
       </fieldset>
@@ -106,7 +104,7 @@ export default function CalendarWidget({ mode = 'month' }) {
   useEffect(() => {
     if (!token) { setResult(null); setError(''); setLoading(false); return; }
     const controller = new AbortController();
-    setLoading(true); setError(''); setResult(null);
+    setLoading(true); setError('');
     listEvents(token, startISO, endISO, controller.signal).then(items => {
       if (!controller.signal.aborted) setResult({ key: `${startISO}/${endISO}`, token, events: items });
     }).catch(err => {
@@ -118,12 +116,12 @@ export default function CalendarWidget({ mode = 'month' }) {
     setNotice('');
     setDate(view === 'month' ? new Date(date.getFullYear(), date.getMonth() + direction, 1) : addDays(date, direction * (view === 'week' ? 7 : 1)));
   }
-  const visible = events.filter(event => includePast || eventBounds(event).end > new Date(now));
+  const visible = longEventsByDeadline(events, now, includePast);
   const days = Array.from({ length: view === 'week' ? 7 : 1 }, (_, index) => addDays(start, index));
   return <div className="calendar-widget">
     {!token ? <div className="calendar-connect">
       <strong>{mode === 'month' ? 'Vos prochaines échéances' : 'Votre semaine, en un regard'}</strong>
-      <p>Retrouvez les événements de votre agenda Google principal et ajoutez vos rendez-vous depuis Lumi.</p>
+      <p>{mode === 'month' ? 'Vos événements de 7 jours minimum, de l’échéance la plus proche à la plus lointaine.' : 'Vos cours et activités regroupés par jour, sans plages vides. Seuls les créneaux qui commencent et se terminent le même jour sont affichés.'}</p>
       {!calendar.configured ? <p role="status">La connexion Google Calendar n’est pas encore configurée pour cette application.</p> : <>
         <button type="button" className="button button-dark" onClick={calendar.connect} disabled={!calendar.ready || calendar.connecting}>{calendar.connecting ? 'Connexion…' : calendar.ready ? 'Connecter Google Calendar' : 'Chargement de Google…'}</button>
         {!calendar.ready && calendar.error && <button type="button" onClick={calendar.prepare}>Réessayer</button>}
@@ -136,28 +134,20 @@ export default function CalendarWidget({ mode = 'month' }) {
           <button type="button" aria-label="Période suivante" onClick={() => move(1)}>→</button>
         </div>
         <button type="button" onClick={() => setDate(new Date())}>Aujourd’hui</button>
-        <button type="button" className="calendar-add" onClick={() => { setNotice(''); setCreating(true); }}>+ Événement</button>
+        <button type="button" className="calendar-add" onClick={() => { setNotice(''); setCreating(true); }}>{mode === 'month' ? '+ Événement' : '+ Créneau'}</button>
       </div>
       <div className="calendar-options">
         {mode === 'month' ? <label><input type="checkbox" checked={includePast} onChange={e => setIncludePast(e.target.checked)} />Inclure les événements passés</label> : <div className="calendar-switch" role="group" aria-label="Vue du calendrier">{[['week', 'Semaine'], ['day', 'Jour']].map(([value, label]) => <button type="button" key={value} aria-pressed={view === value} onClick={() => setView(value)}>{label}</button>)}</div>}
         <span>{Intl.DateTimeFormat().resolvedOptions().timeZone}</span>
       </div>
       {notice && <p className="feedback success" role="status">{notice}</p>}
-      {loading ? <p role="status">Chargement des événements…</p> : error ? <p className="feedback error" role="alert">{error}</p> : view === 'month' ? <>
-        <p className="calendar-period">{date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })} · {visible.length} événement{visible.length > 1 ? 's' : ''}</p>
-        {visible.length ? <ul className="calendar-events">{visible.map(event => <EventRow event={event} key={event.id} />)}</ul> : <p className="calendar-empty">{includePast ? 'Aucun événement ce mois-ci.' : 'Aucun événement à venir sur ce mois.'}</p>}
-      </> : <div className={`calendar-days calendar-view-${view}`}>
-        {days.map(day => {
-          const items = eventsOnDay(events, day);
-          const today = localDate(day) === localDate(new Date(now));
-          return <section key={localDate(day)} className={`calendar-day ${today ? 'is-today' : ''}`} aria-label={dayFormat.format(day)} aria-current={today ? 'date' : undefined}>
-            <div className="calendar-day-heading"><h4>{view === 'week' ? <>{weekdayFormat.format(day)}<time dateTime={localDate(day)}>{shortDateFormat.format(day)}</time></> : dayFormat.format(day)}{today && <span className="calendar-today-label">Aujourd’hui</span>}</h4><button type="button" aria-label={`Ajouter un événement le ${dayFormat.format(day)}`} onClick={() => { setDate(day); setNotice(''); setCreating(true); }}>+</button></div>
-            {items.length ? <ul className="calendar-events">{items.map(event => <EventRow event={event} compact={view === 'week'} key={event.id} />)}</ul> : <p className="calendar-empty">Aucun événement</p>}
-          </section>;
-        })}
-      </div>}
+      {loading && <p role="status">Actualisation de l’agenda…</p>}
+      {error ? <p className="feedback error" role="alert">{error}</p> : view === 'month' ? <>
+        <p className="calendar-period">{date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })} · {visible.length} événement{visible.length > 1 ? 's' : ''} · Échéances croissantes</p>
+        {visible.length ? <ul className="calendar-events">{visible.map(event => <EventRow event={event} key={event.id} />)}</ul> : <p className="calendar-empty">{includePast ? 'Aucun événement de 7 jours minimum sur ce mois.' : 'Aucun événement de 7 jours minimum en cours ou à venir sur ce mois.'}</p>}
+      </> : <Timetable events={events} days={days} now={now} onCreate={day => { setDate(day); setNotice(''); setCreating(true); }} />}
       <div className="calendar-footer"><a href="https://calendar.google.com/" target="_blank" rel="noopener noreferrer">Google Calendar ↗</a><button type="button" disabled={loading} onClick={calendar.refresh}>Actualiser</button><button type="button" onClick={calendar.disconnect}>Déconnecter</button></div>
     </>}
-    {creating && <EventForm date={date} onClose={() => setCreating(false)} onCreated={createdDate => { setCreating(false); setDate(createdDate); setNotice('Événement créé dans Google Calendar.'); }} />}
+    {creating && <EventForm date={date} timetable={mode !== 'month'} onClose={() => setCreating(false)} onCreated={createdDate => { setCreating(false); setDate(createdDate); setNotice(mode === 'month' ? 'Événement créé dans Google Calendar.' : 'Créneau créé dans Google Calendar.'); }} />}
   </div>;
 }

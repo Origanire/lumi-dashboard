@@ -29,7 +29,7 @@ export const WIDGET_TYPES = {
     defaultHeight: 2,
   },
   agenda: {
-    label: 'Agenda · Échéances du mois',
+    label: 'Événements · Échéances du mois',
     eyebrow: 'Google Calendar · Mois',
     icon: '◷',
     color: 'blue',
@@ -37,12 +37,12 @@ export const WIDGET_TYPES = {
     defaultHeight: 3,
   },
   calendar_week: {
-    label: 'Agenda · Semaine et jour',
-    eyebrow: 'Google Calendar · Planning',
+    label: 'Emploi du temps · Semaine et jour',
+    eyebrow: 'Google Calendar · Emploi du temps',
     icon: '▦',
     color: 'blue',
-    defaultWidth: 6,
-    defaultHeight: 4,
+    defaultWidth: 12,
+    defaultHeight: 6,
   },
   focus: {
     label: 'Focus',
@@ -146,8 +146,10 @@ export function WidgetEditorFields({ draft, update }) {
     );
   }
 
-  if (draft.type === 'agenda' || draft.type === 'calendar_week') {
-    return <p className="field-hint">Connectez Google Calendar depuis le widget. Les événements sont synchronisés avec votre agenda principal ; la priorité, les labels techniques et l’échéance se renseignent lors de leur création.</p>;
+  if (draft.type === 'calendar_week') return <p className="field-hint">Cours et activités avec horaires, sur une seule journée. Les journées entières et les événements qui passent minuit sont exclus. Les récurrences Google Calendar sont synchronisées.</p>;
+
+  if (draft.type === 'agenda') {
+    return <p className="field-hint">Événements de 7 jours minimum, triés par échéance croissante. Sans échéance renseignée, la fin de l’événement sert de référence.</p>;
   }
 
   if (draft.type === 'notes') {

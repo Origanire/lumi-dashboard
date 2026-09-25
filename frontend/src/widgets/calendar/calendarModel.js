@@ -67,3 +67,35 @@ export function buildEvent(draft) {
     } },
   };
 }
+
+// The timetable uses the browser's local dates, just like its hour labels.
+export function isTimetableEvent(event) {
+  if (!event.start?.dateTime || !event.end?.dateTime) return false;
+  const { start, end } = eventBounds(event);
+  return Number.isFinite(+start) && Number.isFinite(+end) && end > start && localDate(start) === localDate(end);
+}
+export function isLongEvent(event) {
+  const { start, end } = eventBounds(event);
+  return Number.isFinite(+start) && Number.isFinite(+end) && end >= addDays(start, 7);
+}
+export function eventDeadline(event) {
+  const { deadline } = eventMetadata(event);
+  if (deadline) return new Date(+addDays(fromDate(deadline), 1) - 1);
+  const { end } = eventBounds(event);
+  return event.end?.date ? new Date(+end - 1) : end;
+}
+export function longEventsByDeadline(events, now, includePast = false) {
+  return events.filter(event => isLongEvent(event) && (includePast || eventBounds(event).end > new Date(now)))
+    .sort((a, b) => eventDeadline(a) - eventDeadline(b) || eventBounds(a).start - eventBounds(b).start || String(a.id || '').localeCompare(String(b.id || '')));
+}
+
+export const slotDuration = event => Math.max(1, (eventBounds(event).end - eventBounds(event).start) / 60000);
+export function compactWeekLayout(dayItems, width, height) {
+  const columns = Math.min(dayItems.length || 1, width < 340 ? 2 : width < 620 ? 4 : 7);
+  const rows = Math.ceil(dayItems.length / columns) || 1;
+  const available = Math.max(0, height / rows - 58);
+  const fits = scale => dayItems.every(items => items.reduce((sum, event) => sum + Math.max(44, slotDuration(event) * scale), 0) + Math.max(0, items.length - 1) * 5 <= available);
+  let low = 0, high = 1.5;
+  for (let i = 0; i < 20; i++) { const mid = (low + high) / 2; if (fits(mid)) low = mid; else high = mid; }
+  return { columns, scale: low };
+}

@@ -90,3 +90,58 @@ test('non-JSON and malformed 403 errors preserve a safe fallback', async t => {
   response = Response.json({ error: { errors: [null], details: 'invalid' } }, { status: 403 });
   await assert.rejects(() => listEvents('test-token', 'start', 'end'), error => error.status === 403);
 });
+
+test('timetable keeps same-day timed courses, including recurring instances, but excludes nights and all-day events', async () => {
+  const { isTimetableEvent } = await import('../src/widgets/calendar/calendarModel.js');
+  assert.equal(isTimetableEvent({ ...buildEvent(draft), recurringEventId: 'course' }), true);
+  assert.equal(isTimetableEvent(buildEvent({ ...draft, allDay: true })), false);
+  assert.equal(isTimetableEvent(buildEvent({ ...draft, endDate: '2026-09-22', endTime: '00:00' })), false);
+  assert.equal(isTimetableEvent(buildEvent({ ...draft, startTime: '23:00', endDate: '2026-09-22', endTime: '01:00' })), false);
+  assert.equal(isTimetableEvent({ start: { dateTime: 'invalid' }, end: { dateTime: 'invalid' } }), false);
+  assert.equal(isTimetableEvent({ start: { dateTime: '2026-09-21T10:00:00+02:00' }, end: { dateTime: '2026-09-21T09:00:00+02:00' } }), false);
+});
+test('timetable classifies dates in the display timezone instead of comparing raw ISO date prefixes', async () => {
+  const { isTimetableEvent } = await import('../src/widgets/calendar/calendarModel.js');
+  if (Intl.DateTimeFormat().resolvedOptions().timeZone !== 'Europe/Paris') return;
+  assert.equal(isTimetableEvent({ start: { dateTime: '2026-09-21T21:30:00Z' }, end: { dateTime: '2026-09-21T22:30:00Z' } }), false);
+  assert.equal(isTimetableEvent({ start: { dateTime: '2026-09-21T23:00:00Z' }, end: { dateTime: '2026-09-22T00:00:00Z' } }), true);
+});
+
+test('long events require seven calendar days, including all-day exclusive ends and DST', async () => {
+  const { isLongEvent } = await import('../src/widgets/calendar/calendarModel.js');
+  assert.equal(isLongEvent(buildEvent(draft)), false);
+  assert.equal(isLongEvent(buildEvent({ ...draft, allDay: true, endDate: '2026-09-26' })), false);
+  assert.equal(isLongEvent(buildEvent({ ...draft, allDay: true, endDate: '2026-09-27' })), true);
+  assert.equal(isLongEvent(buildEvent({ ...draft, endDate: '2026-09-28', endTime: '08:59' })), false);
+  assert.equal(isLongEvent(buildEvent({ ...draft, endDate: '2026-09-28', endTime: '09:00' })), true);
+  assert.equal(isLongEvent(buildEvent({ ...draft, allDay: true, startDate: '2026-03-25', endDate: '2026-03-31' })), true);
+  assert.equal(isLongEvent({}), false);
+});
+test('long event ordering uses deadlines before end dates and preserves input', async () => {
+  const { longEventsByDeadline, eventDeadline } = await import('../src/widgets/calendar/calendarModel.js');
+  const a = { id: 'a', ...buildEvent({ ...draft, endDate: '2026-10-20', deadline: '2026-09-25' }) };
+  const b = { id: 'b', ...buildEvent({ ...draft, endDate: '2026-10-01', deadline: '' }) };
+  const c = { id: 'c', ...buildEvent({ ...draft, allDay: true, endDate: '2026-09-28', deadline: '' }) };
+  const input = [b, c, a, buildEvent(draft)];
+  assert.deepEqual(longEventsByDeadline(input, new Date(2026, 8, 21)).map(e => e.id), ['a', 'c', 'b']);
+  assert.equal(input[0], b);
+  assert.equal(localDate(eventDeadline(c)), '2026-09-28');
+  assert.deepEqual(longEventsByDeadline(input, new Date(2026, 10, 1)), []);
+  assert.equal(longEventsByDeadline(input, new Date(2026, 10, 1), true).length, 3);
+});
+
+test('compact week ignores empty gaps, fits dense days and adapts to widget dimensions', async () => {
+  const { compactWeekLayout, slotDuration } = await import('../src/widgets/calendar/calendarModel.js');
+  const early = buildEvent(draft);
+  const late = buildEvent({ ...draft, startTime: '20:00', endTime: '22:00' });
+  const days = [[early, late], [], [], [], [], [], []];
+  const wide = compactWeekLayout(days, 900, 400);
+  assert.equal(wide.columns, 7);
+  assert.equal(slotDuration(late), slotDuration(early) * 2);
+  assert.ok(Math.max(44, slotDuration(early) * wide.scale) + Math.max(44, slotDuration(late) * wide.scale) + 5 <= 342);
+  assert.equal(compactWeekLayout(days, 500, 400).columns, 4);
+  assert.equal(compactWeekLayout(days, 250, 400).columns, 2);
+  assert.ok(compactWeekLayout(days, 900, 200).scale < wide.scale);
+  assert.equal(compactWeekLayout([[early]], 200, 400).columns, 1);
+  assert.ok(Number.isFinite(compactWeekLayout([[], [], []], 200, 10).scale));
+});
