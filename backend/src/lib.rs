@@ -11,6 +11,7 @@ use utoipa::{
 };
 use utoipa_swagger_ui::SwaggerUi;
 
+pub mod about;
 pub mod auth;
 pub mod email_auth;
 mod error;
@@ -80,6 +81,7 @@ pub fn app(pool: PgPool) -> Router {
 pub fn app_with_mailer(pool: PgPool, mailer: mail::Mailer) -> Router {
     Router::new()
         .route("/api/health", get(health))
+        .route("/about.json", get(about::about))
         .route("/api/auth/register", post(auth::register))
         .route("/api/auth/login", post(auth::login))
         .route("/api/auth/me", get(auth::current_user))
