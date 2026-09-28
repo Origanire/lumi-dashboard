@@ -2,7 +2,7 @@
 
 Ajouter « GitHub · Push » ou « GitHub · Graphe » depuis le dashboard. Indiquer `propriétaire/dépôt` ou l'URL HTTPS GitHub. Le widget Push accepte de 1 à 20 événements.
 
-Les dépôts publics sont consultés directement via l'API REST GitHub, sans configuration serveur. Pour les dépôts privés, ouvrir « Dépôt privé / connexion GitHub » dans chaque widget et saisir un personal access token autorisé pour le dépôt (fine-grained : Contents et Metadata en lecture ; les organisations peuvent exiger une approbation). Le jeton est conservé dans sessionStorage, séparément pour chaque utilisateur Lumi, et partagé entre ses widgets GitHub dans cet onglet. Il survit au rechargement, mais est supprimé à la déconnexion de Lumi. Il n'est jamais inscrit dans les paramètres des widgets, le localStorage ou une variable VITE. Déconnecter GitHub déconnecte tous les widgets de cet utilisateur dans l'onglet. Déconnecter le widget n'invalide pas le jeton sur GitHub.
+Les dépôts publics sont consultés directement via l'API REST GitHub, sans configuration serveur. Pour les dépôts privés, ouvrir « Dépôt privé / connexion GitHub » dans chaque widget et saisir un personal access token autorisé pour le dépôt (fine-grained : Contents et Metadata en lecture ; les organisations peuvent exiger une approbation). Le jeton est conservé uniquement en mémoire, lié à la session Lumi, et partagé entre ses widgets GitHub dans cet onglet. Il est perdu au rechargement et supprimé à la déconnexion de Lumi. Il n'est jamais inscrit dans les paramètres des widgets, le localStorage ou une variable VITE. Déconnecter GitHub déconnecte tous les widgets de cet utilisateur dans l'onglet. Déconnecter le widget n'invalide pas le jeton sur GitHub.
 
 ## Push
 
