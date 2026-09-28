@@ -179,4 +179,12 @@ flowchart LR
   B --> S[Spotify]
 ```
 
-Les comptes et sessions sont conservés en PostgreSQL. Les dashboards restent pour le moment dans le stockage local, isolés par identifiant utilisateur. Les intégrations externes sont appelées depuis le navigateur ; les jetons Google restent en mémoire, tandis que le stockage Spotify doit encore être sécurisé et isolé par compte. Les routes privées utilisent la session et les permissions vérifiées par le serveur.
+Les comptes et sessions sont conservés en PostgreSQL. Les dashboards restent pour le moment dans le stockage local, isolés par identifiant utilisateur. Les intégrations externes sont appelées depuis le navigateur ; les jetons Google restent en mémoire, et les jetons Spotify/GitHub sont conservés uniquement en mémoire, liés à la session Lumi. Les routes privées utilisent la session et les permissions vérifiées par le serveur.
+
+## Sécurité des connexions externes
+
+Les jetons Spotify et GitHub ne sont plus persistés dans `localStorage` ou `sessionStorage`. Les anciens jetons stockés sont supprimés lors de l’accès au module de session. Ils sont effacés à la déconnexion et deviennent inaccessibles lorsque la session Lumi change. Une reconnexion au fournisseur est nécessaire après rechargement. Le matériel temporaire PKCE Spotify reste dans `sessionStorage` le temps du retour OAuth, lié à la session Lumi initiatrice ; une réponse tardive d’une ancienne session est refusée.
+
+Pour Spotify en local, ouvrir Lumi sur `http://127.0.0.1:8080` (ou `:5174` en développement) et s’y connecter avant d’autoriser Spotify, afin de garder la même origine au retour OAuth. Les requêtes Spotify authentifiées sont limitées à `https://api.spotify.com/v1/` et refusent les redirections.
+
+Nginx et l’API ajoutent les en-têtes `X-Content-Type-Options`, `X-Frame-Options` et `Referrer-Policy`. L’API interdit la mise en cache. Les dashboards restent dans le stockage local par utilisateur : cette séparation ne protège pas contre une personne ayant accès au profil navigateur. Une protection XSS complète, la limitation des tentatives de connexion et la persistance serveur restent à traiter ; HTTPS doit être configuré pour un déploiement public.
