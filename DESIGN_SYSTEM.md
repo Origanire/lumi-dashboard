@@ -72,3 +72,11 @@ Les imports de `style.css` conservent l’ordre historique des règles : ne pas 
 `styles/widget-adaptive.css`, importé en dernier, adapte les six types de widgets : texte et contrôles flexibles, notes éditables, détails secondaires masqués, liste Spotify défilante, lecteur réduit jusqu’au titre et à lecture/pause. Les actions Modifier / Supprimer restent disponibles ; aux tailles extrêmes, le défilement permet d’atteindre les commandes qui ne peuvent pas tenir. Les données et états React sont conservés pendant le changement de format.
 
 Vérification des seuils et du nettoyage de l’observateur : `node --test frontend/tests/widget-size.test.mjs`.
+
+## Direction produit — emploi du temps
+
+Lumi vise un outil de productivité technologique et sobre, intuitif sans sacrifier les fonctions utiles. Trois usages restent distincts : emploi du temps (cours et activités, notamment récurrents), événements et gestion de tâches. Une connexion Notion pour les tâches est envisagée ultérieurement.
+
+L’emploi du temps affiche uniquement les créneaux horaires dont le début et la fin tombent le même jour dans le fuseau du navigateur. La vue événements affiche uniquement les éléments de 7 jours minimum, triés par échéance croissante (date de fin en l’absence d’échéance explicite), sur le mois sélectionné. Les éléments plus courts qui passent minuit et les journées entières de moins de 7 jours ne figurent dans aucune de ces deux vues ; ils restent dans Google Calendar. Le gestionnaire de tâches est prévu ultérieurement.
+
+La vue semaine est compacte : les créneaux sont empilés chronologiquement dans chaque jour, sans espaces pour les heures libres. Leur hauteur dépend de leur durée et de la place disponible, avec un minimum lisible. Le widget observe sa taille : sept colonnes sur grande largeur, quatre puis deux sur les formats étroits. Le défilement vertical reste possible quand la densité dépasse la place disponible. Les détails sont accessibles au clic ; les priorités, labels et échéances ne chargent pas cette vue. Le nouveau widget utilise par défaut toute la largeur et six lignes de hauteur ; les dimensions déjà enregistrées restent personnalisables via Modifier. Les styles sont dans `styles/calendar.css`.

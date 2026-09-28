@@ -3,6 +3,7 @@ import GitHubWidget from './github/GitHubWidget';
 import GmailWidget, { GmailComposeWidget } from './gmail/GmailWidget';
 import WeatherWidget from './WeatherWidget';
 import AgendaWidget from './AgendaWidget';
+import CalendarWidget from './calendar/CalendarWidget';
 import FocusWidget from './FocusWidget';
 import NotesWidget from './NotesWidget';
 import SpotifyNowPlayingWidget from './spotify/SpotifyNowPlayingWidget';
@@ -31,12 +32,20 @@ export const WIDGET_TYPES = {
     defaultHeight: 2,
   },
   agenda: {
-    label: 'Agenda',
-    eyebrow: 'Aujourd’hui',
+    label: 'Événements · Échéances du mois',
+    eyebrow: 'Google Calendar · Mois',
     icon: '◷',
     color: 'blue',
     defaultWidth: 6,
-    defaultHeight: 2,
+    defaultHeight: 3,
+  },
+  calendar_week: {
+    label: 'Emploi du temps · Semaine et jour',
+    eyebrow: 'Google Calendar · Emploi du temps',
+    icon: '▦',
+    color: 'blue',
+    defaultWidth: 12,
+    defaultHeight: 6,
   },
   focus: {
     label: 'Focus',
@@ -78,7 +87,8 @@ export const WIDGET_CONFIG_KEYS = {
   gmail_unread: ['type', 'title', 'gmailClientId', 'gmailLimit'],
   gmail_compose: ['type', 'title', 'gmailAccount', 'gmailClientId'],
   weather: ['type', 'title', 'city'],
-  agenda: ['type', 'title', 'nextEvent', 'time', 'detail'],
+  agenda: ['type', 'title'],
+  calendar_week: ['type', 'title'],
   focus: ['type', 'title', 'duration'],
   notes: ['type', 'title', 'content'],
   spotify_player: ['type', 'title', 'clientId', 'refreshInterval'],
@@ -95,6 +105,8 @@ export function WidgetContent({ widget, onChange, userId }) {
       return <WeatherWidget widget={widget} />;
     case 'agenda':
       return <AgendaWidget widget={widget} />;
+    case 'calendar_week':
+      return <CalendarWidget mode="week" />;
     case 'focus':
       return <FocusWidget widget={widget} />;
     case 'notes':
@@ -151,37 +163,10 @@ export function WidgetEditorFields({ draft, update }) {
     );
   }
 
+  if (draft.type === 'calendar_week') return <p className="field-hint">Cours et activités avec horaires, sur une seule journée. Les journées entières et les événements qui passent minuit sont exclus. Les récurrences Google Calendar sont synchronisées.</p>;
+
   if (draft.type === 'agenda') {
-    return (
-      <>
-        <label htmlFor="widget-event">Rendez-vous</label>
-        <input
-          id="widget-event"
-          value={draft.nextEvent || ''}
-          onChange={(event) => update('nextEvent', event.target.value)}
-          maxLength="100"
-          placeholder="Ex. Faire le point"
-        />
-        <label htmlFor="widget-time">Heure</label>
-        <input
-          id="widget-time"
-          type="time"
-          value={draft.time || '14:30'}
-          onChange={(event) => update('time', event.target.value)}
-        />
-        <label htmlFor="widget-detail">Détails</label>
-        <input
-          id="widget-detail"
-          value={draft.detail || ''}
-          onChange={(event) => update('detail', event.target.value)}
-          maxLength="150"
-          placeholder="Lieu, durée…"
-        />
-        <p className="field-hint">
-          Un repère saisi par vous, sans synchronisation avec un calendrier.
-        </p>
-      </>
-    );
+    return <p className="field-hint">Événements de 7 jours minimum, triés par échéance croissante. Sans échéance renseignée, la fin de l’événement sert de référence.</p>;
   }
 
   if (draft.type === 'notes') {
