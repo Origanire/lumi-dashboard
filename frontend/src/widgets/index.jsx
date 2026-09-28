@@ -1,4 +1,5 @@
 import React from 'react';
+import GitHubWidget from './github/GitHubWidget';
 import GmailWidget, { GmailComposeWidget } from './gmail/GmailWidget';
 import WeatherWidget from './WeatherWidget';
 import AgendaWidget from './AgendaWidget';
@@ -17,6 +18,8 @@ export {
 };
 
 export const WIDGET_TYPES = {
+  github_pushes: { label: 'GitHub · Push', eyebrow: 'Activité du dépôt', icon: '⑂', color: 'blue', defaultWidth: 6, defaultHeight: 3 },
+  github_graph: { label: 'GitHub · Graphe', eyebrow: 'Historique des commits', icon: '⑂', color: 'blue', defaultWidth: 6, defaultHeight: 4 },
   gmail_unread: { label: 'Gmail · Non lus', eyebrow: 'Boîte de réception', icon: '✉', color: 'red', defaultWidth: 6, defaultHeight: 3 },
   gmail_compose: { label: 'Gmail · Rédiger', eyebrow: 'Nouveau message', icon: '✎', color: 'red', defaultWidth: 2, defaultHeight: 1 },
   weather: {
@@ -70,6 +73,8 @@ export const WIDGET_TYPES = {
 };
 
 export const WIDGET_CONFIG_KEYS = {
+  github_pushes: ['type', 'title', 'githubRepo', 'githubLimit'],
+  github_graph: ['type', 'title', 'githubRepo'],
   gmail_unread: ['type', 'title', 'gmailClientId', 'gmailLimit'],
   gmail_compose: ['type', 'title', 'gmailAccount', 'gmailClientId'],
   weather: ['type', 'title', 'city'],
@@ -80,8 +85,10 @@ export const WIDGET_CONFIG_KEYS = {
   spotify_top: ['type', 'title', 'clientId', 'timeRange', 'limit'],
 };
 
-export function WidgetContent({ widget, onChange }) {
+export function WidgetContent({ widget, onChange, userId }) {
   switch (widget.type) {
+    case 'github_pushes':
+    case 'github_graph': return <GitHubWidget widget={widget} userId={userId} />;
     case 'gmail_unread': return <GmailWidget widget={widget} />;
     case 'gmail_compose': return <GmailComposeWidget widget={widget} />;
     case 'weather':
@@ -102,6 +109,16 @@ export function WidgetContent({ widget, onChange }) {
 }
 
 export function WidgetEditorFields({ draft, update }) {
+  if (draft.type === 'github_pushes' || draft.type === 'github_graph') return <>
+    <label htmlFor="github-repo">Dépôt GitHub</label>
+    <input id="github-repo" value={draft.githubRepo || ''} onChange={event => update('githubRepo', event.target.value)} required placeholder="propriétaire/dépôt ou https://github.com/propriétaire/dépôt" />
+    {draft.type === 'github_pushes' && <>
+      <label htmlFor="github-limit">Nombre de push à afficher</label>
+      <input id="github-limit" type="number" min="1" max="20" required value={draft.githubLimit ?? 5} onChange={event => update('githubLimit', Number(event.target.value))} />
+    </>}
+    <p className="field-hint">Dépôts publics accessibles directement. Pour un dépôt privé, connectez un jeton GitHub depuis le widget après sa création.</p>
+  </>;
+
   if (draft.type === 'gmail_unread') return <>
     <label htmlFor="gmail-limit">Nombre de mails à afficher</label>
     <input id="gmail-limit" type="number" min="1" max="20" required value={draft.gmailLimit ?? 5} onChange={event => update('gmailLimit', Number(event.target.value))} />

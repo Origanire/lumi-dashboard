@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Dialog from './components/Dialog';
+import { parseRepository } from './widgets/github/githubClient';
 import useWidgetSize from './hooks/useWidgetSize';
 import {
   WIDGET_TYPES,
@@ -146,6 +147,7 @@ function WidgetIcon({ type }) {
 }
 
 function WidgetCard({
+  userId,
   widget,
   onEdit,
   onRemove,
@@ -204,7 +206,7 @@ function WidgetCard({
           </button>
         </div>
       </div>
-      <WidgetContent widget={widget} onChange={onChange} />
+      <WidgetContent widget={widget} onChange={onChange} userId={userId} />
       {arranging && (
         <span className="drag-hint">
           Déplacer par l’en-tête · ou utiliser Modifier
@@ -261,7 +263,12 @@ function WidgetEditor({ widget, mode, onClose, onSave }) {
 
   function submit(event) {
     event.preventDefault();
-    const saved = onSave({ ...draft, title: draft.title.trim() || type.label });
+    let normalized = draft;
+    if (draft.type.startsWith('github_')) {
+      try { normalized = { ...draft, githubRepo: parseRepository(draft.githubRepo) }; }
+      catch (err) { setError(err.message); return; }
+    }
+    const saved = onSave({ ...normalized, title: draft.title.trim() || type.label });
     if (!saved)
       setError('Un widget avec exactement ces paramètres existe déjà.');
   }
@@ -707,6 +714,7 @@ export default function WidgetDashboard({ userId }) {
           .sort((a, b) => a.y - b.y || a.x - b.x)
           .map((widget) => (
             <WidgetCard
+              userId={userId}
               key={widget.id}
               widget={widget}
               arranging={arranging}
