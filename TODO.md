@@ -44,9 +44,9 @@ Le projet doit proposer au minimum **1 + X services** et **3 × X widgets au tot
 ### Sécurité
 
 - [x] Ne jamais stocker les mots de passe en clair. Hashes bcrypt en base ; les identifiants publics du README sont uniquement des comptes de test locaux.
-- [ ] Protéger les données personnelles. Authentification en place ; connexions aux services et données du dashboard à finaliser.
-- [ ] Protéger les tokens OAuth et les identifiants externes. Spotify utilise un stockage navigateur commun, à isoler par compte et à sécuriser.
-- [ ] Associer chaque donnée à l'utilisateur connecté. Comptes/sessions en base et dashboards locaux isolés ; session Spotify encore commune au navigateur.
+- [ ] Protéger les données personnelles. En-têtes anti-framing, nosniff, no-referrer et no-store API en place ; jetons externes en mémoire. Dashboards locaux et durcissement global (CSP, limitation des tentatives de connexion) à finaliser.
+- [ ] Protéger les tokens OAuth et les identifiants externes. Spotify et GitHub conservent désormais leurs jetons uniquement en mémoire, liés à la session Lumi ; anciens stockages purgés. OAuth Spotify lié à la session initiatrice et URLs sortantes restreintes. Validation OAuth réelle et protection XSS complète restantes.
+- [ ] Associer chaque donnée à l'utilisateur connecté. Comptes/sessions en base et dashboards locaux isolés ; jetons Spotify/GitHub isolés par session ; persistance serveur des dashboards encore à réaliser.
 - [x] Vérifier côté backend que l'utilisateur a le droit d'accéder à une ressource.
 - [x] Ne jamais faire confiance uniquement aux contrôles du frontend.
 - [x] Prévoir un système de variables d'environnement pour les secrets. `.env` chargé côté backend ; modèle de configuration incomplet, voir documentation.
@@ -115,3 +115,8 @@ Le projet doit proposer au minimum **1 + X services** et **3 × X widgets au tot
 - HTTP : `/dashboard`, `/api/health` et `/about.json` répondent sur le port 8080.
 - `cargo fmt` indisponible : composant rustfmt absent de la toolchain locale.
 - Les validations OAuth réelles, l’effectif du groupe, la persistance serveur, les abonnements, les rafraîchissements généralisés et la démonstration restent ouverts ; aucune validation fournisseur n’est déduite des tests unitaires.
+
+### Sécurité — vérifications complémentaires
+
+- 31 tests frontend réussis, dont isolation des jetons Spotify/GitHub, suppression du stockage historique et refus des URLs Spotify externes.
+- Compilation frontend réussie. Les essais OAuth avec fournisseurs réels restent à effectuer.
