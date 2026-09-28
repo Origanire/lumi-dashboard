@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "TZ=Europe/Paris node --test tests/*.test.js"
+    "test": "TZ=Europe/Paris node --test tests/*.test.js tests/*.test.mjs"
   },
   "dependencies": {
     "react": "^19.1.0",
