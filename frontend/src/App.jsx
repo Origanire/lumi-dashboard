@@ -1,3 +1,4 @@
+import { clearStoredAuth } from './widgets/spotify/spotifyClient';
 import { clearGitHubSessions } from './widgets/github/githubSession';
 import React, { useEffect, useState } from 'react';
 import WidgetDashboard from './WidgetDashboard';
@@ -483,6 +484,7 @@ export default function App() {
       }
     }
     clearGitHubSessions();
+    clearStoredAuth();
     sessionStorage.removeItem(SESSION_TOKEN_KEY);
     setUser(null);
     setSessionError('');
