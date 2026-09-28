@@ -1,3 +1,4 @@
+import { SESSION_TOKEN_KEY } from '../../config.js';
 /**
  * Spotify Web API Client
  *
@@ -30,6 +31,10 @@ export const SPOTIFY_SCOPES = [
 ];
 
 const STORAGE_KEY_AUTH = 'lumi_spotify_auth';
+const PKCE_OWNER = 'lumi_spotify_pkce_owner';
+let memoryAuth = null;
+let memoryOwner = null;
+const currentOwner = () => sessionStorage.getItem(SESSION_TOKEN_KEY);
 const STORAGE_KEY_PKCE_VERIFIER = 'lumi_spotify_pkce_verifier';
 const STORAGE_KEY_PKCE_STATE = 'lumi_spotify_pkce_state';
 
@@ -108,6 +113,9 @@ export function getSpotifyClientId(customClientId) {
  * Does not require manual client ID configuration if default or .env is provided.
  */
 export async function redirectToSpotifyAuthorize(customClientId, scopes = SPOTIFY_SCOPES) {
+  const owner = currentOwner();
+  if (!owner) throw new Error('Connectez-vous à Lumi avant de connecter Spotify.');
+  if (window.location.hostname === 'localhost') throw new Error('Ouvrez Lumi sur 127.0.0.1 et reconnectez-vous avant de connecter Spotify.');
   const clientId = getSpotifyClientId(customClientId);
   if (!clientId) {
     throw new Error('Un Client ID Spotify valide est requis.');
@@ -122,6 +130,9 @@ export async function redirectToSpotifyAuthorize(customClientId, scopes = SPOTIF
   // 3. Generate CSRF state token
   const state = generateRandomString(16);
   const redirectUri = getSpotifyRedirectUri();
+
+  if (owner !== currentOwner()) throw new Error('Session Lumi modifiée.');
+  sessionStorage.setItem(PKCE_OWNER, owner);
 
   // 4. Save verifier and state in sessionStorage for callback verification
   sessionStorage.setItem(STORAGE_KEY_PKCE_VERIFIER, verifier);
@@ -161,9 +172,12 @@ export async function handleSpotifyCallback(customClientId) {
   window.history.replaceState({}, document.title, cleanUrl);
 
   if (error) {
+    clearStoredAuth();
     throw new Error(`Erreur d'autorisation Spotify: ${error}`);
   }
 
+  const owner = sessionStorage.getItem(PKCE_OWNER);
+  sessionStorage.removeItem(PKCE_OWNER);
   const savedState = sessionStorage.getItem(STORAGE_KEY_PKCE_STATE);
   const verifier = sessionStorage.getItem(STORAGE_KEY_PKCE_VERIFIER);
   const activeClientId =
@@ -174,6 +188,8 @@ export async function handleSpotifyCallback(customClientId) {
   sessionStorage.removeItem(STORAGE_KEY_PKCE_VERIFIER);
   sessionStorage.removeItem(STORAGE_KEY_ACTIVE_CLIENT_ID);
 
+  if (!owner || owner !== currentOwner()) throw new Error('Session Lumi modifiée. Reconnectez Spotify.');
+
   if (!state || state !== savedState) {
     throw new Error('Validation d’état PKCE invalide (CSRF mismatch).');
   }
@@ -182,7 +198,7 @@ export async function handleSpotifyCallback(customClientId) {
     throw new Error('Code verifier PKCE introuvable. Veuillez réessayer.');
   }
 
-  const authData = await exchangeCodeForToken(activeClientId, code, verifier);
+  const authData = await exchangeCodeForToken(activeClientId, code, verifier, owner);
   const dashboardUrl = `${window.location.origin}/dashboard`;
   window.history.replaceState({}, document.title, dashboardUrl);
   return authData;
@@ -192,7 +208,7 @@ export async function handleSpotifyCallback(customClientId) {
  * Exchanges authorization code for access & refresh tokens.
  * No client secret is sent, preserving security on client side.
  */
-async function exchangeCodeForToken(clientId, code, verifier) {
+async function exchangeCodeForToken(clientId, code, verifier, owner) {
   const redirectUri = getSpotifyRedirectUri();
   const body = new URLSearchParams({
     client_id: clientId,
@@ -222,7 +238,7 @@ async function exchangeCodeForToken(clientId, code, verifier) {
     scope: data.scope,
   };
 
-  saveStoredAuth(authData);
+  saveStoredAuth(authData, owner);
   return authData;
 }
 
@@ -230,6 +246,7 @@ async function exchangeCodeForToken(clientId, code, verifier) {
  * Proactively refreshes the Spotify access token.
  */
 export async function refreshSpotifyToken() {
+  const owner = currentOwner();
   const auth = getStoredAuth();
   if (!auth || !auth.refreshToken || !auth.clientId) {
     clearStoredAuth();
@@ -251,7 +268,7 @@ export async function refreshSpotifyToken() {
   const data = await response.json();
   if (!response.ok) {
     // Refresh token expired or revoked; user must authorize again
-    clearStoredAuth();
+    if (owner === currentOwner()) clearStoredAuth();
     throw new Error(data.error_description || 'Jeton de rafraîchissement expiré. Reconnexion requise.');
   }
 
@@ -264,35 +281,34 @@ export async function refreshSpotifyToken() {
     scope: data.scope || auth.scope,
   };
 
-  saveStoredAuth(updatedAuth);
+  saveStoredAuth(updatedAuth, owner);
   return updatedAuth;
 }
 
 export function getStoredAuth() {
-  try {
-    const item = localStorage.getItem(STORAGE_KEY_AUTH);
-    return item ? JSON.parse(item) : null;
-  } catch {
-    return null;
+  // Never import the legacy shared credentials into a user's session.
+  localStorage.removeItem(STORAGE_KEY_AUTH);
+  if (!currentOwner() || memoryOwner !== currentOwner()) {
+    memoryAuth = null;
+    memoryOwner = null;
   }
+  return memoryAuth;
 }
 
-export function saveStoredAuth(authData) {
-  try {
-    localStorage.setItem(STORAGE_KEY_AUTH, JSON.stringify(authData));
-    window.dispatchEvent(new CustomEvent('lumi:spotify-auth-changed', { detail: authData }));
-  } catch (err) {
-    console.warn('Impossible de sauvegarder la session Spotify dans localStorage:', err);
-  }
+export function saveStoredAuth(authData, owner = currentOwner()) {
+  if (!owner || owner !== currentOwner()) throw new Error('Session Lumi modifiée. Reconnectez Spotify.');
+  memoryOwner = owner;
+  memoryAuth = authData;
+  localStorage.removeItem(STORAGE_KEY_AUTH);
+  window.dispatchEvent(new CustomEvent('lumi:spotify-auth-changed', { detail: authData }));
 }
 
 export function clearStoredAuth() {
-  try {
-    localStorage.removeItem(STORAGE_KEY_AUTH);
-    window.dispatchEvent(new CustomEvent('lumi:spotify-auth-changed', { detail: null }));
-  } catch (err) {
-    console.warn('Impossible de supprimer la session Spotify:', err);
-  }
+  memoryAuth = null;
+  memoryOwner = null;
+  localStorage.removeItem(STORAGE_KEY_AUTH);
+  for (const key of [PKCE_OWNER, STORAGE_KEY_PKCE_STATE, STORAGE_KEY_PKCE_VERIFIER, STORAGE_KEY_ACTIVE_CLIENT_ID]) sessionStorage.removeItem(key);
+  window.dispatchEvent(new CustomEvent('lumi:spotify-auth-changed', { detail: null }));
 }
 
 /**
@@ -309,7 +325,8 @@ function sleep(ms) {
  * - HTTP 429 exponential backoff with Retry-After header respect
  * - OpenAPI error response parsing
  */
-export async function spotifyFetch(endpoint, options = {}, attempt = 1) {
+export async function spotifyFetch(endpoint, options = {}, attempt = 1, owner = currentOwner()) {
+  if (!owner || owner !== currentOwner()) throw new Error('Session Lumi modifiée.');
   let auth = getStoredAuth();
   if (!auth || !auth.accessToken) {
     throw new Error('Non authentifié avec Spotify.');
@@ -324,14 +341,17 @@ export async function spotifyFetch(endpoint, options = {}, attempt = 1) {
     }
   }
 
-  const url = endpoint.startsWith('http') ? endpoint : `${SPOTIFY_API_BASE}${endpoint}`;
+  const url = new URL(endpoint.startsWith('http') ? endpoint : `${SPOTIFY_API_BASE}${endpoint}`);
+  if (url.origin !== 'https://api.spotify.com' || !url.pathname.startsWith('/v1/')) throw new Error('URL Spotify interdite.');
   const headers = {
     Accept: 'application/json',
     Authorization: `Bearer ${auth.accessToken}`,
     ...(options.headers || {}),
   };
 
-  const response = await fetch(url, { ...options, headers });
+  const response = await fetch(url, { ...options, headers, redirect: 'error' });
+
+  if (owner !== currentOwner()) throw new Error('Session Lumi modifiée.');
 
   // 204 No Content (e.g. playback idle)
   if (response.status === 204) {
@@ -347,16 +367,16 @@ export async function spotifyFetch(endpoint, options = {}, attempt = 1) {
     const retryAfterSec = retryAfterHeader ? parseInt(retryAfterHeader, 10) : Math.pow(2, attempt);
     const delayMs = Math.max(retryAfterSec * 1000, 1000);
     await sleep(delayMs);
-    return spotifyFetch(endpoint, options, attempt + 1);
+    return spotifyFetch(endpoint, options, attempt + 1, owner);
   }
 
   // Handle Token Expiration during request (HTTP 401)
   if (response.status === 401 && attempt <= 2) {
     try {
       await refreshSpotifyToken();
-      return spotifyFetch(endpoint, options, attempt + 1);
+      return spotifyFetch(endpoint, options, attempt + 1, owner);
     } catch {
-      clearStoredAuth();
+      if (owner === currentOwner()) clearStoredAuth();
       throw new Error('Session Spotify expirée. Veuillez vous reconnecter.');
     }
   }
