@@ -106,6 +106,13 @@ pub fn app_with_mailer(pool: PgPool, mailer: mail::Mailer) -> Router {
                 response
                     .headers_mut()
                     .insert("cache-control", "no-store".parse().unwrap());
+                for (name, value) in [
+                    ("x-content-type-options", "nosniff"),
+                    ("x-frame-options", "DENY"),
+                    ("referrer-policy", "no-referrer"),
+                ] {
+                    response.headers_mut().insert(name, value.parse().unwrap());
+                }
                 response
             },
         ))
