@@ -1,3 +1,4 @@
+import { clearGitHubSessions } from './widgets/github/githubSession';
 import React, { useEffect, useState } from 'react';
 import WidgetDashboard from './WidgetDashboard';
 import AuthDialog from './components/AuthDialog';
@@ -481,6 +482,7 @@ export default function App() {
         return;
       }
     }
+    clearGitHubSessions();
     sessionStorage.removeItem(SESSION_TOKEN_KEY);
     setUser(null);
     setSessionError('');
