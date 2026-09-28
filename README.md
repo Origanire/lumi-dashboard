@@ -2,8 +2,6 @@
 
 Projet de tableau de bord réalisé dans le cadre du module G-WEB-500.
 
-> Ce README est un modèle à compléter au fur et à mesure du développement.
-
 ## Présentation
 
 L'application proposera un tableau de bord personnalisable avec des services et des widgets.
@@ -116,7 +114,7 @@ npm run build
 npm start
 ```
 
-`npm start` lance uniquement le backend compilé. Pour déployer le frontend, servir les fichiers de `frontend/dist/` avec un serveur web et configurer ce serveur pour transmettre `/api` au backend. Le déploiement complet sera mis en place dans une prochaine étape.
+`npm start` lance uniquement le backend compilé. Pour déployer le frontend, servir les fichiers de `frontend/dist/` avec un serveur web et configurer ce serveur pour transmettre `/api` au backend. Le lancement Docker complet est décrit ci-dessous.
 
 ## Tests
 
@@ -133,3 +131,52 @@ Les tests backend utilisent `DATABASE_URL` et une base PostgreSQL isolée par sc
 ## Licence
 
 La licence reste à définir. Voir [LICENCE.md](./LICENCE.md).
+
+## Lancement complet avec Docker
+
+Depuis un clone, copier `.env.example` vers `.env`, puis lancer :
+
+```bash
+docker compose build
+docker compose up -d --wait
+```
+
+Ouvrir **http://localhost:8080**. Nginx sert React et transmet `/api` et `/about.json` au backend Rust ; PostgreSQL et Mailpit démarrent avec l’application. Les migrations sont appliquées automatiquement. Les e-mails locaux restent consultables sur http://localhost:8025. `docker-compose build` et `docker-compose up` conviennent également si le binaire Compose historique est installé.
+
+Le fichier racine est `docker-compose.yml`. `npm run services` continue à ne lancer que PostgreSQL et Mailpit pour le développement. `docker compose down` arrête la stack sans effacer les données ; ne pas ajouter `-v` si les comptes doivent être conservés.
+
+`DOCKER_APP_URL` permet de changer l’origine utilisée dans les liens e-mail Docker (défaut `http://localhost:8080`). Cette stack utilise Mailpit ; pour un déploiement public, configurer un serveur SMTP réel et HTTPS. Les identifiants OAuth `VITE_GOOGLE_CLIENT_ID` et `VITE_SPOTIFY_CLIENT_ID` sont injectés à la compilation : reconstruire l’image frontend après modification et autoriser l’origine/URL de retour correspondante chez le fournisseur.
+
+Le backend Docker n’expose pas son port à l’hôte. `TRUST_PROXY=true` lui permet de lire l’IP fournie par Nginx, qui remplace l’en-tête client ; ne pas activer cette option pour un backend directement accessible.
+
+## Services et widgets
+
+Tous les widgets possèdent un titre et une taille configurables.
+
+| Service | Widget | Paramètres spécifiques | État |
+| --- | --- | --- | --- |
+| Spotify | Lecture en cours | Client ID, rafraîchissement 5–120 s | OAuth PKCE, validation avec compte réel restante |
+| Spotify | Top titres | Client ID, période, 1–10 titres | Chargement à l’ouverture/configuration |
+| Gmail | Non lus | Client ID, 1–20 messages | OAuth, actualisation chaque minute |
+| Gmail | Rédiger | Client ID, compte indicatif | Envoi explicite depuis Lumi |
+| Google Calendar | Échéances du mois | Titre | Agenda principal connecté |
+| Google Calendar | Planning semaine/jour | Titre | Agenda principal connecté |
+| Local | Notes | Contenu | Enregistré dans le navigateur |
+| Local | Focus | Durée 5–120 minutes | Minuteur local |
+| Démonstration | Météo | Ville | Données fictives, aucun service météo connecté |
+
+Voir les guides [Calendar](frontend/docs/google-calendar.md) et [Gmail](frontend/src/widgets/gmail/README.md). Les autorisations externes nécessitent une configuration fournisseur ; leur présence dans le catalogue ne prouve pas une validation de bout en bout. Le catalogue machine est disponible publiquement sur `/about.json`, avec l’IP du client, l’heure Unix et les paramètres de type `integer` ou `string`. Le groupe `local` y identifie les outils locaux et la démonstration, sans constituer un service externe.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  B[Navigateur React] --> N[Nginx :8080]
+  N --> A[API Rust Axum]
+  A --> P[(PostgreSQL)]
+  A --> M[Mailpit / SMTP]
+  B --> G[Google Calendar / Gmail]
+  B --> S[Spotify]
+```
+
+Les comptes et sessions sont conservés en PostgreSQL. Les dashboards restent pour le moment dans le stockage local, isolés par identifiant utilisateur. Les intégrations externes sont appelées depuis le navigateur ; les jetons Google restent en mémoire, tandis que le stockage Spotify doit encore être sécurisé et isolé par compte. Les routes privées utilisent la session et les permissions vérifiées par le serveur.
