@@ -11,6 +11,10 @@ async fn public_catalog_has_client_time_and_typed_parameters() {
     request.extensions_mut().insert(ConnectInfo("192.0.2.42:1234".parse::<std::net::SocketAddr>().unwrap()));
     let response = lumi_backend::app(pool).oneshot(request).await.unwrap();
     assert_eq!(response.status(), 200);
+    assert_eq!(response.headers()["x-content-type-options"], "nosniff");
+    assert_eq!(response.headers()["x-frame-options"], "DENY");
+    assert_eq!(response.headers()["referrer-policy"], "no-referrer");
+    assert_eq!(response.headers()["cache-control"], "no-store");
     let body = response.into_body().collect().await.unwrap().to_bytes();
     let value: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(value["client"]["host"], "192.0.2.42");
