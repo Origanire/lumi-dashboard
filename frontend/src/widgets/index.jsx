@@ -106,7 +106,7 @@ export function WidgetContent({ widget, onChange, userId }) {
     case 'agenda':
       return <AgendaWidget widget={widget} />;
     case 'calendar_week':
-      return <CalendarWidget mode="week" />;
+      return <CalendarWidget mode="week" widget={widget} />;
     case 'focus':
       return <FocusWidget widget={widget} />;
     case 'notes':
@@ -121,6 +121,10 @@ export function WidgetContent({ widget, onChange, userId }) {
 }
 
 export function WidgetEditorFields({ draft, update }) {
+  const refreshing = !['notes', 'focus', 'weather', 'gmail_compose', 'spotify_player'].includes(draft.type);
+  return <>{refreshing && <><label htmlFor="widget-refresh">Rafraîchissement (secondes)</label><input id="widget-refresh" type="number" min={draft.type.startsWith('github_') ? 300 : 30} max="3600" required value={draft.refreshInterval ?? (draft.type.startsWith('github_') ? 300 : 60)} onChange={event => update('refreshInterval', Number(event.target.value))} /><p className="field-hint">Actualisation lorsque la page est visible. Un intervalle plus long réduit les appels au fournisseur.</p></>}<SpecificEditorFields draft={draft} update={update} /></>;
+}
+function SpecificEditorFields({ draft, update }) {
   if (draft.type === 'github_pushes' || draft.type === 'github_graph') return <>
     <label htmlFor="github-repo">Dépôt GitHub</label>
     <input id="github-repo" value={draft.githubRepo || ''} onChange={event => update('githubRepo', event.target.value)} required placeholder="propriétaire/dépôt ou https://github.com/propriétaire/dépôt" />
@@ -134,7 +138,7 @@ export function WidgetEditorFields({ draft, update }) {
   if (draft.type === 'gmail_unread') return <>
     <label htmlFor="gmail-limit">Nombre de mails à afficher</label>
     <input id="gmail-limit" type="number" min="1" max="20" required value={draft.gmailLimit ?? 5} onChange={event => update('gmailLimit', Number(event.target.value))} />
-    <p className="field-hint">Les derniers mails non lus de la boîte de réception. Actualisation chaque minute.</p>
+    <p className="field-hint">Les derniers mails non lus de la boîte de réception. Actualisation selon l’intervalle configuré.</p>
     <label htmlFor="gmail-client">Client ID Google (facultatif si configuré globalement)</label>
     <input id="gmail-client" value={draft.gmailClientId || ''} onChange={event => update('gmailClientId', event.target.value)} placeholder="…apps.googleusercontent.com" />
     <p className="field-hint">Connectez votre compte depuis le widget après sa création.</p>

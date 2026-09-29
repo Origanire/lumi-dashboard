@@ -16,7 +16,10 @@ impl ApiError {
 }
 impl From<sqlx::Error> for ApiError {
     fn from(error: sqlx::Error) -> Self {
-        eprintln!("Database operation failed: {error}");
+        eprintln!(
+            "{}",
+            serde_json::json!({"event":"database_error", "code":error.as_database_error().and_then(|value| value.code()).map(|value| value.into_owned())})
+        );
         Self(
             StatusCode::INTERNAL_SERVER_ERROR,
             "Erreur interne du serveur.",

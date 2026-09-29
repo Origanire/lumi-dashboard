@@ -107,7 +107,7 @@ export default function SpotifyNowPlayingWidget({ widget }) {
   const progressRef = useRef(null);
   const timerRef = useRef(null);
 
-  const refreshInterval = 1;
+  const refreshInterval = Math.min(120, Math.max(5, Number(widget.refreshInterval) || 10));
 
   /* auth change listener */
   useEffect(() => {
@@ -292,6 +292,16 @@ export default function SpotifyNowPlayingWidget({ widget }) {
           <SpotifyLogo size={14} />
           {connecting ? 'Redirection…' : 'Se connecter avec Spotify'}
         </button>
+        {error && <p className="spotify-error-message" role="alert">{error}</p>}
+        {typeof window !== 'undefined' && window.location.hostname === 'localhost' && (
+          <a
+            href={window.location.href.replace('//localhost', '//127.0.0.1')}
+            className="spotify-link-btn"
+            style={{ marginTop: '6px', display: 'inline-block' }}
+          >
+            Ouvrir sur 127.0.0.1 ↗
+          </a>
+        )}
         <small className="spotify-redirect-hint">
           Redirect URI : <code>{getSpotifyRedirectUri()}</code>
         </small>

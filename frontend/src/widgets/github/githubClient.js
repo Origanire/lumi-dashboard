@@ -1,3 +1,4 @@
+import { cachedGitHub, cacheGitHub, blockGitHub, githubBlocked } from './githubCache.js';
 export function parseRepository(value = '') {
   const clean = value.trim().replace(/^https:\/\/github\.com\//i, '').replace(/\/$/, '').replace(/\.git$/, '');
   if (!/^[a-zA-Z0-9][a-zA-Z0-9-]*\/[a-zA-Z0-9_.-]+$/.test(clean) || clean.split('/')[1] === '..') {
@@ -7,9 +8,15 @@ export function parseRepository(value = '') {
 }
 export const pushLimit = value => Math.min(20, Math.max(1, Math.floor(Number(value) || 5)));
 export async function githubRequest(repo, path, token = '', signal) {
+  const key = JSON.stringify([token, parseRepository(repo), path]);
+  if (signal?.aborted) throw new DOMException('Requête annulée', 'AbortError');
+  const cached = cachedGitHub(key);
+  if (cached !== null) return cached;
+  if (githubBlocked(token)) throw new Error('Quota GitHub atteint. Patientez avant de réessayer.');
   const response = await fetch(`https://api.github.com/repos/${parseRepository(repo)}/${path}`, {
     headers: { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     signal,
+    redirect: 'error',
   });
   if (!response.ok) {
     if (response.status === 401) throw new Error('Jeton GitHub invalide ou expiré.');
@@ -17,12 +24,15 @@ export async function githubRequest(repo, path, token = '', signal) {
     if (response.status === 409) throw new Error('Ce dépôt ne contient pas encore de commits.');
     if (response.status === 429 || response.status === 403 && response.headers.get('x-ratelimit-remaining') === '0') {
       const reset = Number(response.headers.get('x-ratelimit-reset'));
+      blockGitHub(token, reset * 1000);
       throw new Error(`Quota GitHub atteint.${reset ? ` Réessayez après ${new Date(reset * 1000).toLocaleTimeString('fr-FR')}.` : ' Réessayez plus tard.'} Un jeton augmente le quota des accès publics.`);
     }
     if (response.status === 403) throw new Error('Accès GitHub refusé. Vérifiez les permissions du jeton ou réessayez plus tard.');
     throw new Error('GitHub est indisponible. Réessayez.');
   }
-  return response.json();
+  const data = await response.json();
+  cacheGitHub(key, data);
+  return data;
 }
 export async function loadPushes(repo, count, token, signal) {
   const events = [];

@@ -1,3 +1,4 @@
+import { notify } from '../components/Notifications';
 import React, { useEffect, useRef, useState } from 'react';
 
 export default function FocusWidget({ widget }) {
@@ -17,7 +18,7 @@ export default function FocusWidget({ widget }) {
         Math.ceil((deadline.current - Date.now()) / 1000)
       );
       setRemaining(seconds);
-      if (seconds === 0) setRunning(false);
+      if (seconds === 0) { setRunning(false); clearInterval(timer); notify(`Session « ${widget.title} » terminée. Prenez une pause.`); }
     }, 250);
     return () => clearInterval(timer);
   }, [running]);

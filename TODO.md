@@ -1,122 +1,107 @@
 # To-do list du projet Lumi
 
-État revu le 28 septembre 2026 à partir du sujet PDF, du code et des vérifications effectuées en session.
+État du 29 septembre 2026. `[x]` signifie implémenté et vérifié dans le périmètre décrit ; `[ ]` désigne une validation encore nécessaire. Les tests simulés ne valent pas validation OAuth réelle.
 
-`[x]` : réalisé dans le périmètre indiqué. `[ ]` : absent ou encore partiel ; les réserves sont précisées sur la ligne. Une interface de widget présente ne suffit pas à valider un service connecté.
-
-Le classement des fonctionnalités obligatoires suit le PDF. Les sections suivantes regroupent les travaux de qualité et les extensions ; elles ne constituent pas toutes des exigences explicites du sujet.
-
-**X = nombre de membres du groupe : [à compléter].**
-Le projet doit proposer au minimum **1 + X services** et **3 × X widgets au total**.
+**Équipe : Milo Bousquet et Nathan Muzay, contribution commune à l’ensemble du projet. X = 2.**
+Objectif du sujet : **3 services minimum et 6 widgets de services minimum**. Le code contient 4 intégrations externes, 8 widgets externes et 3 outils/démonstrations locaux, soit 11 types.
 
 ## Must have — obligatoire
 
 ### Fonctionnalités
 
-- [x] Création de compte. Inscription publique personnel/employé/entreprise ; administrateur attribué hors formulaire.
-- [x] Confirmation de l’inscription. Lien à usage unique par e-mail, expiration et limitation des renvois ; connexion bloquée avant confirmation. Tests backend présents.
-- [x] Connexion et déconnexion.
-- [x] Protection des pages accessibles uniquement aux utilisateurs connectés. Session vérifiée via `/api/auth/me` ; routes privées protégées côté serveur.
-- [ ] Gestion des services auxquels l'utilisateur est abonné. Pas encore de catalogue ni de gestion des abonnements depuis le compte.
-- [ ] Au moins 1 + X services. Effectif à renseigner ; Spotify, Gmail et Google Calendar sont codés, encore à valider de bout en bout avec les fournisseurs.
-- [ ] Au moins 3 × X widgets au total. Neuf types dans le catalogue UI : six intégrations de widgets Spotify/Gmail/Calendar, météo de démonstration et Notes/Focus locaux. Validation OAuth réelle restante.
-- [x] Au moins un paramètre configurable pour chaque widget. Paramètres présents pour les neuf types actuels ; ne valide pas leur source de données.
-- [x] Ajout d'un widget au dashboard.
-- [x] Configuration d'un widget avant son ajout.
-- [ ] Définition de la fréquence de rafraîchissement d'un widget. Partiel : configurable pour Spotify lecture en cours uniquement.
-- [x] Modification d'un widget existant.
-- [x] Déplacement d'un widget.
-- [x] Suppression d'un widget.
-- [ ] Plusieurs instances du même widget avec des configurations différentes. Pris en charge dans le dashboard ; validation des données distinctes à terminer pour chaque service réel.
-- [ ] Rafraîchissement automatique des données. Partiel : lecture Spotify et Gmail actualisés périodiquement ; pas de mécanisme généralisé ni de timer pour Spotify Top Titres.
-- [x] Interface responsive. Affichage desktop/mobile sans débordement vérifié.
-- [x] Interface compréhensible et accessible. Parcours principaux vérifiés au clavier, dialogues natifs et focus visibles ; poursuivre les contrôles pour les futures fonctionnalités.
+- [x] Création de compte avec rôles personnel/employé/entreprise ; administrateur attribué hors inscription publique.
+- [x] Confirmation de l’inscription par e-mail : usage unique, expiration, limitation des renvois et connexion bloquée avant confirmation.
+- [x] Connexion et déconnexion ; liens de connexion et réinitialisation également disponibles.
+- [x] Protection des pages privées et vérification de session côté serveur.
+- [x] Gestion des abonnements aux services dans Mon compte ; préférences stockées en PostgreSQL et catalogue filtré. Les connexions fournisseurs restent distinctes des abonnements.
+- [ ] Valider réellement au moins 3 services. Spotify, Gmail, Calendar et GitHub codés ; GitHub public testé réellement. Comptes OAuth déclarés prêts par l’équipe, essais Google/Spotify à consigner dans [RECETTE.md](docs/RECETTE.md).
+- [ ] Valider réellement au moins 6 widgets externes. Huit implémentés ; deux GitHub vérifiés sur dépôt public, validation des six Google/Spotify restante.
+- [x] Au moins un paramètre configurable pour chaque widget : titre, paramètres métier, taille et/ou fréquence.
+- [x] Ajout d’un widget et configuration avant ajout.
+- [x] Fréquence de rafraîchissement par instance : Spotify lecture 5–120 s, Gmail/Calendar/Spotify Top 30–3600 s, GitHub 300–3600 s. Les outils locaux et l’envoi Gmail n’effectuent pas de polling.
+- [x] Modification, déplacement et suppression d’un widget ; annulation de la dernière suppression.
+- [x] Plusieurs instances du même type avec des configurations différentes ; parcours Notes testé, paramètres distincts transmis aux clients des services. Résultats des instances OAuth à vérifier dans la recette fournisseur.
+- [x] Rafraîchissement automatique des widgets de données ; réduction du polling quand la page est cachée pour Gmail, Calendar, GitHub et Spotify Top.
+- [x] Interface responsive : parcours desktop et mobile 390 px testés sans débordement horizontal.
+- [x] Dialogues natifs, libellés, états de chargement/erreur, navigation clavier et commandes de déplacement accessibles. Un audit d’accessibilité exhaustif reste hors de cette validation.
 
-### Livraison technique — obligatoire dans le PDF
+### Livraison technique
 
-- [x] Livrer `docker-compose.yml` à la racine pour construire et lancer l’application complète. React/Nginx, Rust, PostgreSQL et Mailpit ; images construites et stack démarrée.
-- [ ] Vérifier `docker-compose build` et `docker-compose up` depuis un clone vierge. `docker compose build` et `up -d --wait` validés dans le workspace ; clone vierge encore à tester.
-- [x] Exposer l’application sur `http://localhost:8080`. Frontend, route SPA `/dashboard` et API vérifiés par HTTP.
-- [x] Implémenter `GET /about.json` : IP du client, heure Unix du serveur et catalogue des services/widgets avec paramètres de type `integer` ou `string`. Test automatisé et appel via Nginx validés ; Docker Desktop peut présenter l’IP de sa passerelle NAT.
-- [ ] Préparer la présentation et une démonstration des fonctionnalités obligatoires.
-- [ ] Vérifier le contenu livré : sources et ressources nécessaires, sans fichiers temporaires ni artefacts de compilation ; fichiers de bonus identifiés selon le sujet.
+- [x] Stack Docker complète à la racine : React/Nginx, Rust, PostgreSQL et Mailpit.
+- [x] Construction et démarrage depuis un clone propre : `npm run check:clean` valide le clone, les tests, les builds Docker, les migrations et les endpoints HTTP.
+- [ ] Vérification finale de l’application sur `http://localhost:8080` après reconstruction.
+- [x] `GET /about.json` : IP client, heure Unix, catalogue des 11 widgets et paramètres typés ; test de cohérence frontend/backend ajouté.
+- [x] Présentation et scénario de démonstration préparés dans [PRESENTATION.md](docs/PRESENTATION.md). Répétition des parcours OAuth à effectuer avec les comptes de l’équipe.
+- [x] Vérification finale du contenu livré et des artefacts ; bonus identifiés dans [BONUS.md](docs/BONUS.md).
 
 ### Sécurité
 
-- [x] Ne jamais stocker les mots de passe en clair. Hashes bcrypt en base ; les identifiants publics du README sont uniquement des comptes de test locaux.
-- [ ] Protéger les données personnelles. En-têtes anti-framing, nosniff, no-referrer et no-store API en place ; jetons externes en mémoire. Dashboards locaux et durcissement global (CSP, limitation des tentatives de connexion) à finaliser.
-- [ ] Protéger les tokens OAuth et les identifiants externes. Spotify et GitHub conservent désormais leurs jetons uniquement en mémoire, liés à la session Lumi ; anciens stockages purgés. OAuth Spotify lié à la session initiatrice et URLs sortantes restreintes. Validation OAuth réelle et protection XSS complète restantes.
-- [ ] Associer chaque donnée à l'utilisateur connecté. Comptes/sessions en base et dashboards locaux isolés ; jetons Spotify/GitHub isolés par session ; persistance serveur des dashboards encore à réaliser.
-- [x] Vérifier côté backend que l'utilisateur a le droit d'accéder à une ressource.
-- [x] Ne jamais faire confiance uniquement aux contrôles du frontend.
-- [x] Prévoir un système de variables d'environnement pour les secrets. `.env` chargé côté backend ; modèle de configuration incomplet, voir documentation.
+- [x] Mots de passe hachés avec bcrypt ; identifiants de démonstration limités au développement.
+- [x] Données des dashboards rattachées au compte en PostgreSQL, contrôles de propriétaire et détection des conflits de sauvegarde.
+- [x] Jetons externes en mémoire ; isolation Spotify/GitHub par session, purge des anciens stockages de jetons et protection du retour PKCE.
+- [x] Autorisations et rôles vérifiés côté serveur ; tests de refus d’accès intercomptes et administrateur.
+- [x] Validation des configurations côté serveur et à l’import : types autorisés, positions, tailles, limites, absence de jetons dans les paramètres.
+- [x] En-têtes de sécurité, no-store API et CSP Nginx ; dix tentatives de connexion par adresse sur quinze minutes. HTTPS à configurer pour un hébergement public.
+- [x] Variables d’environnement documentées et exclues du dépôt. Les Client IDs OAuth sont publics ; aucun secret ne doit être mis dans une variable `VITE_*`.
 
-### Documentation — contenu du README
+### Documentation
 
-- [x] Expliquer le but de l'application.
-- [x] Présenter les fonctionnalités principales.
-- [x] Décrire les services et widgets disponibles. Inventaire, paramètres, connexions et limites dans le README.
-- [x] Indiquer les technologies utilisées.
-- [x] Expliquer l'organisation générale du projet.
-- [ ] Documenter l'installation. Instructions présentes, mais parcours de clone vierge à corriger et vérifier.
-- [x] Documenter la configuration. PostgreSQL, SMTP, origine Docker et identifiants OAuth documentés ; guide Gmail corrigé pour le `.env` racine.
-- [x] Documenter le lancement en développement.
-- [x] Documenter le lancement en production. Construction et lancement Docker complets documentés ; SMTP réel et HTTPS à configurer pour un hébergement public.
-- [x] Documenter l'exécution des tests.
-- [x] Expliquer l'utilisation de l'application.
+- [x] But de l’application et fonctionnalités principales.
+- [x] Inventaire complet des services/widgets, paramètres, limites et connexions.
+- [x] Technologies, organisation, architecture et schéma du README.
+- [x] Installation, configuration, développement et lancement Docker documentés.
+- [x] Commandes de tests unitaires, backend et navigateur documentées.
+- [x] Utilisation : abonnements, dashboards multiples, sauvegarde, conflits, import/export, administration et mobile.
+- [x] Documentation des nouvelles API dans Swagger et [workspace.md](backend/docs/workspace.md).
 
 ## Should have — fortement recommandé
 
-- [ ] Une page de profil pour gérer les abonnements aux services. « Mon compte » affiche les informations, sans gestion des abonnements.
-- [ ] Une interface d'administration des utilisateurs. Rôle admin présent, sans interface de gestion.
-- [ ] Une gestion claire des erreurs d'API. Authentification et Spotify partiellement couverts ; à homogénéiser avec les services réels.
-- [ ] Des états de chargement pour les widgets. Présents sur Spotify ; à généraliser aux autres services.
-- [ ] Un affichage explicite lorsqu'un service externe est indisponible. Partiellement présent sur Spotify, non validé pour tous les services.
-- [x] Une option pour modifier la taille des widgets.
-- [ ] Une sauvegarde persistante de la position des widgets. Sauvegarde locale fonctionnelle ; persistance serveur et synchronisation entre appareils à réaliser.
-- [ ] Un dashboard différent pour chaque utilisateur. Isolation locale par identifiant utilisateur fonctionnelle ; stockage serveur à réaliser.
-- [ ] Une validation complète des formulaires. Validations auth côté serveur et champs widget présents ; contrôle complet des paramètres de services à terminer.
-- [ ] Un système de logs côté backend. Quelques messages console ; pas de journalisation structurée.
-- [x] Des tests backend pour l'authentification et les permissions. 12 tests comptes et parcours e-mail passent, avec bases SQLx isolées ; un test supplémentaire couvre `/about.json`.
-- [ ] Des tests frontend pour les actions principales. 23 tests unitaires Calendar, Gmail et tailles passent ; script corrigé pour inclure .test.mjs. Suite de parcours navigateur à intégrer.
-- [ ] Une démonstration vidéo de quelques minutes.
-- [x] Une documentation des choix d’architecture avec un schéma simple dans le README.
+- [x] Page de profil avec gestion des abonnements.
+- [x] Administration des utilisateurs : recherche, rôles et révocation des sessions ; interdiction de modifier ses propres rôles.
+- [x] Erreurs API explicites et états de chargement sur les quatre intégrations ; panne GitHub et conflit de sauvegarde vérifiés dans le navigateur.
+- [x] Modification de la taille des widgets.
+- [x] Sauvegarde serveur persistante des configurations et positions ; récupération sur un autre appareil au rechargement, conflits détectés.
+- [x] Dashboards différents pour chaque utilisateur ; tests d’isolation en PostgreSQL.
+- [x] Validation des formulaires et imports, complétée par les contrôles serveur.
+- [x] Logs backend JSON : route générique, statut, durée et identifiant de requête, sans corps ni jeton.
+- [x] Tests backend : authentification, confirmation, permissions, persistance, conflits, abonnements, administration, limitation des connexions et OIDC.
+- [x] Tests frontend unitaires et parcours navigateur : ajout, modification, position, suppression/annulation, persistance, import/export, services, mobile et erreurs.
+- [ ] Vidéo de démonstration : enregistrement final en cours, sortie prévue dans `docs/demo/lumi-demo.mp4`.
+- [x] Documentation des choix d’architecture et des limites.
 
-## Could have — bonus possibles
+## Could have — bonus
 
-- [ ] Connexion avec Google, GitHub ou un autre fournisseur OIDC.
-- [x] Thèmes clair et sombre. Préférence mémorisée, système et synchronisation entre onglets vérifiés.
-- [x] Réorganisation des widgets par glisser-déposer.
-- [x] Redimensionnement visuel des widgets.
-- [ ] Export et import d'un dashboard.
-- [ ] Plusieurs dashboards par utilisateur.
-- [ ] Notifications.
-- [ ] Recherche dans les services et widgets.
-- [ ] Cache des données externes.
-- [ ] Historique des valeurs pour les widgets statistiques.
-- [ ] Interface d'administration plus complète.
-- [ ] Mode mobile avancé.
-- [ ] Gestion de quotas et de limites d'API.
+- [ ] Connexion Google OIDC : code livré, signature/audience/émetteur/expiration/nonce testés ; association explicite d’un compte existant. Validation Google réelle restante.
+- [x] Thèmes clair/sombre.
+- [x] Glisser-déposer et redimensionnement visuel.
+- [x] Export/import JSON sans jetons et avec validation.
+- [x] Plusieurs dashboards par utilisateur (20 maximum).
+- [x] Notifications de session : créations de dashboards et fin du minuteur Focus, 20 messages maximum.
+- [x] Recherche dans les services et le catalogue de widgets.
+- [x] Cache GitHub en mémoire pendant 30 secondes, isolé par jeton et vidé au changement de session.
+- [x] Historique GitHub : 24 observations du nombre d’éléments dans l’aperçu chargé, limité à la session du widget.
+- [x] Administration avec recherche, rôles et révocation ; contrôles serveur testés.
+- [x] Mode mobile : affichage en colonne, cibles tactiles et boutons Monter/Descendre utilisables aussi au clavier.
+- [x] Quotas : affichage des erreurs, pause GitHub après quota, cache et fréquences bornées ; Spotify dispose déjà d’un traitement 429/Retry-After.
 
-## Ordre de travail retenu
+## Écarts identifiés lors de la revue initiale
 
-1. Confirmation e-mail implémentée et tests de non-régression validés.
-2. Docker complet, port 8080 et `/about.json` livrés et vérifiés dans le workspace ; reproduire depuis un clone vierge.
-3. Persister les dashboards et rattacher les connexions aux services aux utilisateurs.
-4. Atteindre le nombre requis de services et widgets réels, puis généraliser le rafraîchissement par instance.
-5. Finaliser les tests reproductibles, le README et la démonstration.
+- [x] Ajouter GitHub à `/about.json` et au README, et tester la cohérence du catalogue.
+- [x] Remplacer le polling Spotify fixé à une seconde par le paramètre de l’instance.
+- [x] Corriger le texte GitHub qui annonçait une conservation du jeton après rechargement.
+- [x] Renseigner les membres et l’effectif.
 
-## Vérifications du 28 septembre 2026
+## Vérifications
 
-- `npm run test -w frontend` : 23 tests réussis.
-- `npm run build -w frontend` : réussi.
-- `cargo test --manifest-path backend/Cargo.toml` : 13 tests réussis.
-- `docker compose build` et `docker compose up -d --wait` : réussis.
-- HTTP : `/dashboard`, `/api/health` et `/about.json` répondent sur le port 8080.
-- `cargo fmt` indisponible : composant rustfmt absent de la toolchain locale.
-- Les validations OAuth réelles, l’effectif du groupe, la persistance serveur, les abonnements, les rafraîchissements généralisés et la démonstration restent ouverts ; aucune validation fournisseur n’est déduite des tests unitaires.
+- 35 tests frontend réussis et compilation Vite réussie.
+- 20 tests backend réussis, dont validation de signatures Google et refus de réutilisation du nonce.
+- 4 parcours navigateur réussis ; scénario vidéo exécuté séparément.
+- Construction Docker réussie ; contrôle du clone propre et démarrage final à consigner.
+- `npm audit --omit=dev` : aucune vulnérabilité signalée. Ce résultat ne constitue pas un audit de sécurité complet.
+- Détails et limites : [VALIDATION.md](docs/VALIDATION.md).
 
-### Sécurité — vérifications complémentaires
+## Validation nécessitant les comptes de l’équipe
 
-- 31 tests frontend réussis, dont isolation des jetons Spotify/GitHub, suppression du stockage historique et refus des URLs Spotify externes.
-- Compilation frontend réussie. Les essais OAuth avec fournisseurs réels restent à effectuer.
+Les applications OAuth sont déclarées prêtes sur `http://localhost:5174`. Gmail/Calendar peuvent utiliser cette origine. Spotify exige `http://127.0.0.1:5174/` comme retour, à autoriser chez le fournisseur. Aucun navigateur connecté aux comptes de l’équipe n’est accessible à l’agent.
+
+Terminer les essais de [RECETTE.md](docs/RECETTE.md), puis fermer les trois cases fournisseurs ci-dessus. Aucun envoi Gmail, événement privé ou consentement externe n’est déclaré validé sans essai réel.

@@ -47,3 +47,6 @@
   font-size: 14px;
   overflow-wrap: anywhere;
 }
+
+.service-list { list-style:none; padding:0; display:grid; gap:16px; }
+.service-list li { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; padding:16px; border:1px solid var(--border); border-radius:12px; }

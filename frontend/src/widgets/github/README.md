@@ -12,7 +12,7 @@ Lecture de trois pages maximum de 100 événements du dépôt, filtrées sur `Pu
 
 Chargement des 8 premières branches renvoyées par GitHub et de 40 commits par branche. Les commits sont dédupliqués par SHA et ordonnés topologiquement (enfants avant parents). Les liens suivent les parents réels, y compris les fusions. Les étiquettes identifient les têtes des branches chargées. Les ancêtres hors de l'aperçu sont représentés par un trait pointillé. L'aperçu n'inclut pas les tags ni les branches supprimées non accessibles depuis les branches chargées.
 
-Actualisation manuelle pour respecter les quotas GitHub, particulièrement faibles sans authentification. Les changements de dépôt annulent les requêtes précédentes. Les erreurs d'accès et de quota sont affichées dans le widget.
+Actualisation manuelle et périodique configurable de 300 à 3600 secondes, lorsque la page est visible. Un cache mémoire de 30 secondes, isolé par jeton, réduit les appels répétés ; il est vidé lors des changements de connexion. Une erreur de quota suspend les appels jusqu’au délai annoncé (entre une minute et une heure). Les changements de dépôt annulent les requêtes précédentes. Les erreurs d'accès et de quota sont affichées dans le widget.
 
 Documentation :
 - https://docs.github.com/en/rest/activity/events

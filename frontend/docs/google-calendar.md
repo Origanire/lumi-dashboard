@@ -46,7 +46,7 @@ Aucun secret client, mot de passe Gmail ou mot de passe d’application SMTP n�
 
 Le jeton Google reste uniquement en mémoire et n’est jamais enregistré dans `localStorage`, dans la disposition du dashboard ou dans la base Lumi. Il disparaît à la déconnexion Lumi, au changement de compte ou au rechargement de la page. À son expiration, le widget propose de reconnecter Google. **Déconnecter** ferme la connexion locale aux deux widgets ; pour retirer définitivement l’autorisation de l’application, utiliser [les connexions du compte Google](https://myaccount.google.com/connections).
 
-La liste est actualisée après une création, au retour sur la fenêtre et chaque minute lorsque la page est visible. Un bouton **Actualiser** est disponible. Les instances récurrentes sont développées par Google et toutes les pages de résultats sont chargées. Les événements annulés sont exclus. En cas de panne, aucune donnée d’exemple ne remplace silencieusement l’agenda réel.
+La liste est actualisée après une création, au retour sur la fenêtre et selon l’intervalle configuré (60 secondes par défaut) lorsque la page est visible. Un bouton **Actualiser** est disponible. Les instances récurrentes sont développées par Google et toutes les pages de résultats sont chargées. Les événements annulés sont exclus. En cas de panne, aucune donnée d’exemple ne remplace silencieusement l’agenda réel.
 
 ## Vérification
 

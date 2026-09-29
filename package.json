@@ -9,7 +9,8 @@
     "build": "npm run build -w frontend && cargo build --release --manifest-path backend/Cargo.toml",
     "start": "cargo run --release --manifest-path backend/Cargo.toml",
     "test": "npm run test -w frontend && cargo test --manifest-path backend/Cargo.toml",
-    "seed:test": "cargo run --manifest-path backend/Cargo.toml --example seed_test_accounts"
+    "seed:test": "cargo run --manifest-path backend/Cargo.toml --example seed_test_accounts",
+    "check:clean": "python3 scripts/check-clean.py"
   },
   "devDependencies": { "concurrently": "^9.2.0" }
 }

@@ -11,7 +11,7 @@ Deux widgets sont disponibles : non lus (1 à 20 messages de la boîte de récep
 
 Le widget utilise Google Identity Services et le scope `gmail.modify`. Les jetons et messages restent en mémoire du composant, sont effacés au démontage/déconnexion, et ne sont pas sauvegardés avec les widgets. Une reconnexion est nécessaire après rechargement ou expiration du jeton. Chaque widget peut être connecté à un compte distinct. « Déconnecter » ferme la session locale ; la révocation des autorisations se fait dans le compte Google.
 
-Lu, archive et spam modifient uniquement le message sélectionné. L'affichage est actualisé chaque minute, au retour dans la fenêtre et après une action. Les mails archivés sont exclus de la liste. Le nombre affiché correspond aux messages chargés, pas au total de la boîte.
+Lu, archive et spam modifient uniquement le message sélectionné. L'affichage est actualisé selon l’intervalle configuré (60 secondes par défaut), au retour dans la fenêtre et après une action. Les mails archivés sont exclus de la liste. Le nombre affiché correspond aux messages chargés, pas au total de la boîte.
 
 L'API Gmail ne fournit pas d'action native de blocage d'expéditeur : « Bloquer dans Gmail » ouvre la conversation et indique d'utiliser son menu ⋮ → Bloquer l'expéditeur. Aucun filtre de suppression n'est créé à sa place.
 

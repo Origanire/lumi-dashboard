@@ -35,3 +35,7 @@ coverage/
 Thumbs.db
 Desktop.ini
 launch.sh
+
+# Rapports navigateur
+frontend/test-results/
+frontend/playwright-report/

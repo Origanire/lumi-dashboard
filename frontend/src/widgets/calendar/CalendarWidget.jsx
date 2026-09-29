@@ -1,3 +1,4 @@
+import useRefresh from '../../hooks/useRefresh';
 import React, { useEffect, useId, useState } from 'react';
 import Dialog from '../../components/Dialog';
 import Timetable from './Timetable';
@@ -80,7 +81,7 @@ function EventForm({ date, timetable = false, onClose, onCreated }) {
   </Dialog>;
 }
 
-export default function CalendarWidget({ mode = 'month' }) {
+export default function CalendarWidget({ mode = 'month', widget = {} }) {
   const calendar = useCalendar();
   const [date, setDate] = useState(() => new Date());
   const [view, setView] = useState(mode === 'month' ? 'month' : 'week');
@@ -94,6 +95,7 @@ export default function CalendarWidget({ mode = 'month' }) {
   const { start, end } = period(date, view);
   const startISO = start.toISOString(), endISO = end.toISOString();
   const token = calendar.auth?.token;
+  const tick = useRefresh(widget.refreshInterval, !!token);
   const key = `${startISO}/${endISO}`;
   const events = result?.key === key && result?.token === token ? result.events : [];
   const { revision, expire } = calendar;
@@ -111,7 +113,7 @@ export default function CalendarWidget({ mode = 'month' }) {
       if (!controller.signal.aborted) { setError(err.message); if (err.status === 401) expire(); }
     }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [token, startISO, endISO, revision, expire]);
+  }, [token, startISO, endISO, revision, expire, tick]);
   function move(direction) {
     setNotice('');
     setDate(view === 'month' ? new Date(date.getFullYear(), date.getMonth() + direction, 1) : addDays(date, direction * (view === 'week' ? 7 : 1)));

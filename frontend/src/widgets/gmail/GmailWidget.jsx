@@ -1,3 +1,4 @@
+import useRefresh from '../../hooks/useRefresh';
 import React, { useEffect, useRef, useState } from 'react';
 import { authorizeGmail, gmailLink, gmailRequest, listUnread, loadGoogleIdentity, mailLimit, messageChange } from './gmailClient';
 
@@ -15,6 +16,7 @@ export default function GmailWidget({ widget }) {
   const lock = useRef(false);
   const clientId = widget.gmailClientId?.trim() || import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
   const limit = mailLimit(widget.gmailLimit);
+  const tick = useRefresh(widget.refreshInterval, !!auth);
   useEffect(() => {
     let live = true;
     if (clientId) loadGoogleIdentity().then(() => { if (live) setReady(true); }).catch(err => { if (live) setError(err.message); });
@@ -39,11 +41,7 @@ export default function GmailWidget({ widget }) {
   useEffect(() => {
     if (!auth) return;
     refresh(auth);
-    const timer = setInterval(() => refresh(auth), 60000);
-    const focus = () => refresh(auth);
-    window.addEventListener('focus', focus);
-    return () => { clearInterval(timer); window.removeEventListener('focus', focus); };
-  }, [auth, limit]);
+  }, [auth, limit, tick]);
   async function connect() {
     const version = ++generation.current;
     setBusy(true); setError(''); setMessages([]); setAuth(null); setAccount('');

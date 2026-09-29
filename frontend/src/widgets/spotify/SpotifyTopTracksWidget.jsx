@@ -1,3 +1,4 @@
+import useRefresh from '../../hooks/useRefresh';
 import React, { useEffect, useState } from 'react';
 import {
   getTopTracks,
@@ -27,6 +28,8 @@ export default function SpotifyTopTracksWidget({ widget }) {
   const [error, setError] = useState(null);
   const [timeRange, setTimeRange] = useState(widget.timeRange || 'short_term');
 
+  const tick = useRefresh(widget.refreshInterval, !!auth);
+  useEffect(() => { setTimeRange(widget.timeRange || 'short_term'); }, [widget.timeRange]);
   const limit = Math.min(10, Math.max(1, Number(widget.limit) || 3));
 
   useEffect(() => {
@@ -64,7 +67,7 @@ export default function SpotifyTopTracksWidget({ widget }) {
     return () => {
       isCancelled = true;
     };
-  }, [auth, timeRange, limit]);
+  }, [auth, timeRange, limit, tick]);
 
   const [connecting, setConnecting] = useState(false);
 
@@ -97,6 +100,15 @@ export default function SpotifyTopTracksWidget({ widget }) {
           {connecting ? 'Génération PKCE & redirection…' : 'Se connecter avec Spotify'}
         </button>
         {error && <span className="spotify-error-message">{error}</span>}
+        {typeof window !== 'undefined' && window.location.hostname === 'localhost' && (
+          <a
+            href={window.location.href.replace('//localhost', '//127.0.0.1')}
+            className="spotify-link-btn"
+            style={{ marginTop: '6px', display: 'inline-block' }}
+          >
+            Ouvrir sur 127.0.0.1 ↗
+          </a>
+        )}
       </div>
     );
   }

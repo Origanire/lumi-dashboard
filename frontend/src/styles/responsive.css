@@ -198,3 +198,12 @@
   }
 }
 
+
+.widget-order-controls { display:flex; gap:8px; margin-bottom:8px; }
+@media (max-width:800px) {
+  .dashboard-toolbar { padding-inline:16px; }
+  .dashboard-toolbar > label { width:100%; }
+  .dashboard-toolbar select { flex:1; min-width:0; }
+  .widget-actions button, .widget-order-controls button { min-width:44px; min-height:44px; }
+  .notification-center .text-button { font-size:11px; }
+}

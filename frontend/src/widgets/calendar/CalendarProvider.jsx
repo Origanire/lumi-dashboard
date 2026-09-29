@@ -67,12 +67,5 @@ export default function CalendarProvider({ children }) {
     setError('');
   }
   const refresh = useCallback(() => setRevision(value => value + 1), []);
-  useEffect(() => {
-    if (!auth) return;
-    const update = () => { if (document.visibilityState === 'visible') refresh(); };
-    const timer = setInterval(update, 60000);
-    window.addEventListener('focus', update);
-    return () => { clearInterval(timer); window.removeEventListener('focus', update); };
-  }, [auth, refresh]);
   return <Context.Provider value={{ auth, ready, configured: !!CLIENT_ID, connecting, error, connect, disconnect, prepare, expire, revision, refresh }}>{children}</Context.Provider>;
 }

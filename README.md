@@ -4,7 +4,7 @@ Projet de tableau de bord réalisé dans le cadre du module G-WEB-500.
 
 ## Présentation
 
-L'application proposera un tableau de bord personnalisable avec des services et des widgets.
+L'application propose des dashboards personnalisables, sauvegardés dans le compte utilisateur, avec quatre intégrations externes.
 
 Lumi rassemble des notes, un minuteur de concentration et des widgets dans un tableau de bord personnalisable. L’interface React communique avec une API Rust pour les comptes et les sessions.
 
@@ -56,7 +56,7 @@ Le backend écoute sur `127.0.0.1:3001` et le frontend sur `localhost:5174`. Vit
 
 Le périmètre actuel couvre la création de compte et la connexion avec les rôles `perso`, `employe`, `entreprise` et `admin`. Les rôles sont cumulables et contrôlés côté serveur. L'inscription publique ne permet pas de s'attribuer le rôle administrateur.
 
-Le formulaire de connexion demande uniquement l’e-mail et le mot de passe. Le profil se choisit à l’inscription ; le rôle de connexion est déterminé par le serveur. Le tableau de bord propose des widgets personnalisables, enregistrés localement par compte dans le navigateur.
+Le formulaire de connexion demande uniquement l’e-mail et le mot de passe. Le profil se choisit à l’inscription ; le rôle de connexion est déterminé par le serveur. Le tableau de bord propose des widgets personnalisables, sauvegardés dans PostgreSQL par compte. Les anciens widgets locaux sont importés lors de la création du premier dashboard serveur.
 
 Les quatre comptes de test (un par rôle), leurs identifiants et la commande `npm run seed:test` sont documentés dans [README-COMPTES.md](./README-COMPTES.md).
 
@@ -126,7 +126,8 @@ Les tests backend utilisent `DATABASE_URL` et une base PostgreSQL isolée par sc
 
 ## Équipe
 
-- [Nom du membre — rôle]
+- Milo Bousquet — conception, frontend, backend, intégrations, tests et documentation.
+- Nathan Muzay — conception, frontend, backend, intégrations, tests et documentation.
 
 ## Licence
 
@@ -155,17 +156,19 @@ Tous les widgets possèdent un titre et une taille configurables.
 
 | Service | Widget | Paramètres spécifiques | État |
 | --- | --- | --- | --- |
+| GitHub | Push récents | Dépôt, 1–20 événements, intervalle 300–3600 s | Dépôts publics ou jeton personnel, cache mémoire 30 s |
+| GitHub | Graphe des commits | Dépôt, intervalle 300–3600 s | Branches et commits, historique des observations en session |
 | Spotify | Lecture en cours | Client ID, rafraîchissement 5–120 s | OAuth PKCE, validation avec compte réel restante |
-| Spotify | Top titres | Client ID, période, 1–10 titres | Chargement à l’ouverture/configuration |
-| Gmail | Non lus | Client ID, 1–20 messages | OAuth, actualisation chaque minute |
+| Spotify | Top titres | Client ID, période, 1–10 titres, intervalle 30–3600 s | Actualisation périodique |
+| Gmail | Non lus | Client ID, 1–20 messages, intervalle 30–3600 s | OAuth, lecture et actions explicites |
 | Gmail | Rédiger | Client ID, compte indicatif | Envoi explicite depuis Lumi |
-| Google Calendar | Échéances du mois | Titre | Agenda principal connecté |
-| Google Calendar | Planning semaine/jour | Titre | Agenda principal connecté |
-| Local | Notes | Contenu | Enregistré dans le navigateur |
+| Google Calendar | Échéances du mois | Titre, intervalle 30–3600 s | Agenda principal connecté |
+| Google Calendar | Planning semaine/jour | Titre, intervalle 30–3600 s | Agenda principal connecté |
+| Local | Notes | Contenu | Sauvegardé dans le compte avec le dashboard |
 | Local | Focus | Durée 5–120 minutes | Minuteur local |
 | Démonstration | Météo | Ville | Données fictives, aucun service météo connecté |
 
-Voir les guides [Calendar](frontend/docs/google-calendar.md) et [Gmail](frontend/src/widgets/gmail/README.md). Les autorisations externes nécessitent une configuration fournisseur ; leur présence dans le catalogue ne prouve pas une validation de bout en bout. Le catalogue machine est disponible publiquement sur `/about.json`, avec l’IP du client, l’heure Unix et les paramètres de type `integer` ou `string`. Le groupe `local` y identifie les outils locaux et la démonstration, sans constituer un service externe.
+Voir les guides [Calendar](frontend/docs/google-calendar.md) , [Gmail](frontend/src/widgets/gmail/README.md) et [GitHub](frontend/src/widgets/github/README.md). Les autorisations externes nécessitent une configuration fournisseur ; leur présence dans le catalogue ne prouve pas une validation de bout en bout. Le catalogue machine est disponible publiquement sur `/about.json`, avec l’IP du client, l’heure Unix et les paramètres de type `integer` ou `string`. Le groupe `local` y identifie les outils locaux et la démonstration, sans constituer un service externe.
 
 ## Architecture
 
@@ -179,7 +182,7 @@ flowchart LR
   B --> S[Spotify]
 ```
 
-Les comptes et sessions sont conservés en PostgreSQL. Les dashboards restent pour le moment dans le stockage local, isolés par identifiant utilisateur. Les intégrations externes sont appelées depuis le navigateur ; les jetons Google restent en mémoire, et les jetons Spotify/GitHub sont conservés uniquement en mémoire, liés à la session Lumi. Les routes privées utilisent la session et les permissions vérifiées par le serveur.
+Les comptes, sessions, dashboards et abonnements sont conservés en PostgreSQL. Chaque opération de dashboard vérifie le propriétaire depuis la session. Les versions de sauvegarde détectent les modifications concurrentes et demandent de recharger en cas de conflit. Les intégrations externes sont appelées depuis le navigateur ; les jetons Google restent en mémoire, et les jetons Spotify/GitHub sont conservés uniquement en mémoire, liés à la session Lumi. Les routes privées utilisent la session et les permissions vérifiées par le serveur.
 
 ## Sécurité des connexions externes
 
@@ -187,4 +190,37 @@ Les jetons Spotify et GitHub ne sont plus persistés dans `localStorage` ou `ses
 
 Pour Spotify en local, ouvrir Lumi sur `http://127.0.0.1:8080` (ou `:5174` en développement) et s’y connecter avant d’autoriser Spotify, afin de garder la même origine au retour OAuth. Les requêtes Spotify authentifiées sont limitées à `https://api.spotify.com/v1/` et refusent les redirections.
 
-Nginx et l’API ajoutent les en-têtes `X-Content-Type-Options`, `X-Frame-Options` et `Referrer-Policy`. L’API interdit la mise en cache. Les dashboards restent dans le stockage local par utilisateur : cette séparation ne protège pas contre une personne ayant accès au profil navigateur. Une protection XSS complète, la limitation des tentatives de connexion et la persistance serveur restent à traiter ; HTTPS doit être configuré pour un déploiement public.
+Nginx et l’API ajoutent les en-têtes `X-Content-Type-Options`, `X-Frame-Options` et `Referrer-Policy`. L’API interdit la mise en cache. Les dashboards sont stockés côté serveur. Nginx applique une CSP qui restreint les scripts et connexions aux fournisseurs utilisés. La connexion par mot de passe est limitée à dix tentatives par adresse sur quinze minutes. Les journaux JSON contiennent la route générique, le statut, la durée et un identifiant de requête, sans corps, e-mail ni jeton. HTTPS et un filtrage réseau doivent être configurés pour un déploiement public. La CSP ne dispense pas d’une revue de sécurité des évolutions. Les anciennes sauvegardes locales restent disponibles pour récupération manuelle.
+
+## Utiliser les nouvelles fonctions
+
+1. Dans **Mon compte → Mes services**, activer les services souhaités. Cette préférence ouvre leur catalogue ; la connexion au fournisseur se fait depuis les widgets. La désactivation conserve les widgets existants et ne révoque pas le consentement chez le fournisseur.
+2. Dans **Nouveau dashboard**, créer un espace (20 maximum). Ajouter, modifier et organiser les widgets (100 maximum par dashboard). La sauvegarde automatique se déclenche après une courte pause. Attendre « Enregistré dans votre compte » avant de fermer la page.
+3. Utiliser le sélecteur pour changer d’espace, ou **Exporter / Importer** pour transférer une configuration JSON. Les exports ne contiennent pas les jetons externes. L’import crée un espace séparé.
+4. En cas de conflit entre appareils, exporter les modifications locales puis **Recharger la version serveur**. Aucun écrasement silencieux n’est effectué. Le rechargement récupère les sauvegardes des autres appareils ; il n’y a pas de synchronisation collaborative instantanée.
+5. **Organiser** permet le glisser-déposer et le redimensionnement sur ordinateur. **Monter / Descendre** fonctionne au clavier et au toucher, et réordonne les widgets en une colonne. Le formulaire conserve les réglages fins de grille.
+6. Le centre de notifications garde les vingt derniers messages de la session, notamment la fin d’un minuteur Focus. Les widgets GitHub gardent jusqu’à 24 observations du nombre d’éléments chargés ; ce n’est pas un historique exhaustif de l’activité du dépôt.
+
+Un compte connecté avec le rôle `admin` dispose dans **Mon compte** de la liste des utilisateurs, de la recherche, de la modification des rôles et de la révocation des sessions. Un administrateur ne peut pas modifier ses propres rôles ni révoquer sa propre session par cet écran. Le rôle administrateur reste attribué hors inscription publique.
+
+## Connexion à Lumi avec Google
+
+Renseigner `GOOGLE_OIDC_CLIENT_ID` côté backend avec le client Web autorisé chez Google, puis redémarrer le backend (ou reconstruire/redémarrer Docker). Ajouter l’origine utilisée aux origines JavaScript autorisées chez Google. Cette connexion est distincte de l’autorisation Gmail/Calendar.
+
+Dans la fenêtre de connexion, **Connexion avec Google** initialise le bouton officiel Google. Un compte existant portant la même adresse doit d’abord se connecter normalement, puis choisir **Associer mon compte Google** dans Mon compte. Les comptes nouveaux reçoivent uniquement le rôle `perso`. Aucun compte existant n’est associé automatiquement par simple égalité d’e-mail.
+
+Le serveur vérifie la signature RSA avec les clés Google, l’émetteur, l’audience, l’expiration, l’adresse confirmée et un nonce à usage unique valable dix minutes. Les clés publiques sont mises en cache cinq minutes. Documentation : [validation des jetons Google](https://developers.google.com/identity/gsi/web/guides/verify-google-id-token) et [OpenID Connect](https://developers.google.com/identity/openid-connect/openid-connect). Une configuration et une connexion réelles restent nécessaires pour valider le parcours fournisseur.
+
+## Tests navigateur reproductibles
+
+Après `npm install` et le démarrage des services locaux :
+
+```bash
+npx playwright install chromium
+docker compose exec postgres createdb -U lumi lumi_e2e
+npm run test:e2e -w frontend
+```
+
+Créer la base une seule fois. `frontend/playwright.config.js` lance des serveurs dédiés sur les ports 3001 et 5174 : arrêter les serveurs de développement avant les tests. La base `lumi_e2e` reste distincte de `lumi`. Les parcours vérifient l’édition, le rechargement, l’import/export, les instances, les abonnements, les conflits, une panne GitHub et le viewport mobile. La démonstration vidéo est exclue par défaut et s’exécute avec `DEMO_RECORD=1 npm run test:e2e -w frontend -- --grep @demo`.
+
+Les tests de services unitaires utilisent des réponses simulées. Ils ne remplacent pas les essais OAuth réels ni un audit de sécurité. Voir [la recette fournisseur](docs/RECETTE.md), [le script de soutenance](docs/PRESENTATION.md) et [le périmètre des bonus](docs/BONUS.md).

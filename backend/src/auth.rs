@@ -250,6 +250,20 @@ pub async fn login(
     State(state): State<AppState>,
     Json(input): Json<LoginRequest>,
 ) -> Result<Json<LoginResponse>, ApiError> {
+    if input.email.len() > 254 || input.password.len() > 1024 {
+        return Err(ApiError::invalid("Identifiants trop longs."));
+    }
+    let address_hash = hash_token(&input.email.trim().to_lowercase());
+    sqlx::query("DELETE FROM login_attempts WHERE window_start < now() - interval '1 day'")
+        .execute(&state.pool)
+        .await?;
+    let attempts: i32 = sqlx::query_scalar("INSERT INTO login_attempts(address_hash) VALUES($1) ON CONFLICT(address_hash) DO UPDATE SET attempts=CASE WHEN login_attempts.window_start < now() - interval '15 minutes' THEN 1 ELSE login_attempts.attempts + 1 END, window_start=CASE WHEN login_attempts.window_start < now() - interval '15 minutes' THEN now() ELSE login_attempts.window_start END RETURNING attempts").bind(&address_hash).fetch_one(&state.pool).await?;
+    if attempts > 10 {
+        return Err(ApiError(
+            StatusCode::TOO_MANY_REQUESTS,
+            "Trop de tentatives. Réessayez dans 15 minutes ou utilisez un lien de connexion.",
+        ));
+    }
     let mut tx = state.pool.begin().await?;
     let account: Option<Account> = sqlx::query_as(
         "SELECT id, email, name, password_hash, email_verified_at IS NOT NULL AS email_verified FROM users WHERE lower(email) = lower($1) FOR UPDATE",
@@ -271,6 +285,10 @@ pub async fn login(
         "Adresse e-mail ou mot de passe incorrect.",
     ))?;
     let result = create_session(&mut tx, account.id).await?;
+    sqlx::query("DELETE FROM login_attempts WHERE address_hash=$1")
+        .bind(address_hash)
+        .execute(&mut *tx)
+        .await?;
     tx.commit().await?;
     Ok(Json(result))
 }

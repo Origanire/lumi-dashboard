@@ -48,3 +48,14 @@ test('GitHub tokens stay in memory, clear legacy storage and reset on account ch
   github.clearGitHubSessions();
   assert.equal(github.readGitHubToken('bob'), '');
 });
+
+
+test('Spotify accepts a pasted env assignment without sending its variable name as the client ID', () => {
+  const id = '4700b9e802c748eda0ec5fa4d55c63d1';
+  assert.equal(spotify.getSpotifyClientId(`VITE_SPOTIFY_CLIENT_ID=${id}`), id);
+  assert.equal(spotify.getSpotifyClientId(` VITE_SPOTIFY_CLIENT_ID="${id}" `), id);
+  localStorage.setItem('lumi_spotify_client_id', `VITE_SPOTIFY_CLIENT_ID=${id}`);
+  assert.equal(spotify.getSpotifyClientId(), id);
+  localStorage.removeItem('lumi_spotify_client_id');
+  assert.throws(() => spotify.getSpotifyClientId('https://accounts.spotify.com/authorize?client_id=wrong'), /uniquement/);
+});

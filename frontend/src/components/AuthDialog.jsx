@@ -1,3 +1,4 @@
+import GoogleSignIn from './GoogleSignIn';
 import { ROLE_LABELS, REGISTRATION_ROLES, SESSION_TOKEN_KEY } from '../config';
 import React, { useEffect, useState } from 'react';
 import Dialog from './Dialog';
@@ -64,6 +65,7 @@ export default function AuthDialog({ api, initialMode, onClose, onLogin }) {
         <button className="button button-dark auth-submit" disabled={busy || (!credentials && remaining > 0)}>{busy ? 'Un instant…' : !credentials && remaining > 0 ? `Nouvel envoi dans ${remaining} s` : MODES[mode].action}<span aria-hidden="true">→</span></button>
       </fieldset>
     </form>
+    {mode === 'login' && <GoogleSignIn onLogin={onLogin} />}
     {mode === 'login' && <div className="email-auth-options">
       {needsVerification && <button className="text-button" onClick={() => switchMode('verify')}>Renvoyer le lien de confirmation</button>}
       <button className="text-button" disabled={busy} onClick={() => switchMode('forgot')}>Mot de passe oublié ?</button>

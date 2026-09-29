@@ -96,15 +96,22 @@ const STORAGE_KEY_ACTIVE_CLIENT_ID = 'lumi_spotify_active_client_id';
 /**
  * Resolves the Spotify Client ID from argument, localStorage, or application default (.env).
  */
+export function normalizeSpotifyClientId(value = '') {
+  const clean = String(value).trim().replace(/^VITE_SPOTIFY_CLIENT_ID\s*=\s*/, '').trim();
+  const unquoted = clean.replace(/^(["'])(.*)\1$/, '$2').trim();
+  if (unquoted && /[\s=/?&#:]/.test(unquoted)) {
+    throw new Error('Collez uniquement la valeur du Client ID Spotify, sans URL ni nom de variable.');
+  }
+  return unquoted;
+}
+
 export function getSpotifyClientId(customClientId) {
-  if (customClientId && typeof customClientId === 'string' && customClientId.trim().length > 0) {
-    return customClientId.trim();
+  if (typeof customClientId === 'string' && customClientId.trim()) {
+    return normalizeSpotifyClientId(customClientId);
   }
   const stored = localStorage.getItem('lumi_spotify_client_id');
-  if (stored && stored.trim().length > 0) {
-    return stored.trim();
-  }
-  return DEFAULT_SPOTIFY_CLIENT_ID.trim();
+  if (stored && stored.trim()) return normalizeSpotifyClientId(stored);
+  return normalizeSpotifyClientId(DEFAULT_SPOTIFY_CLIENT_ID);
 }
 
 /**

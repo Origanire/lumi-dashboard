@@ -1,4 +1,6 @@
-import test from 'node:test';
+import test, { beforeEach } from 'node:test';
+import { clearGitHubCache } from '../src/widgets/github/githubCache.js';
+beforeEach(clearGitHubCache);
 import assert from 'node:assert/strict';
 import { parseRepository, layoutGraph, loadPushes, githubRequest } from '../src/widgets/github/githubClient.js';
 const commit = (sha, parents, date = '2026-01-01') => ({ sha, parents: parents.map(sha => ({ sha })), commit: { message: sha, committer: { date } } });

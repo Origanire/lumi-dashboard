@@ -1,3 +1,7 @@
+import GoogleSignIn from './components/GoogleSignIn';
+import Notifications from './components/Notifications';
+import AdminUsers from './components/AdminUsers';
+import ServiceSubscriptions from './components/ServiceSubscriptions';
 import { clearStoredAuth } from './widgets/spotify/spotifyClient';
 import { clearGitHubSessions } from './widgets/github/githubSession';
 import React, { useEffect, useState } from 'react';
@@ -361,6 +365,7 @@ function Dashboard({ user, onLogout }) {
           </button>
         </nav>
         <div className="workspace-user-actions">
+          <Notifications key={user.id} />
           <ThemeToggle />
           <div className="workspace-account">
             <span className="avatar">{initials}</span>
@@ -439,6 +444,9 @@ function Dashboard({ user, onLogout }) {
                   )}
                 </dl>
               </div>
+              <GoogleSignIn link />
+              <ServiceSubscriptions />
+              {user.role === 'admin' && <AdminUsers userId={user.id} />}
               <p className="field-hint">
                 Le type de compte est défini à la création. Les droits sont
                 vérifiés par le serveur.
@@ -475,6 +483,7 @@ export default function App() {
     if (!initialEmailAction && sessionStorage.getItem(SESSION_TOKEN_KEY)) restore();
   }, []);
   async function logout() {
+    if (!window.dispatchEvent(new Event('lumi:logout-request', { cancelable:true }))) { setSessionError('Attendez la sauvegarde du dashboard avant de vous déconnecter. En cas d’erreur, exportez vos modifications ou rechargez la version serveur.'); return; }
     try {
       await api('/auth/logout', { method: 'POST' });
     } catch (err) {

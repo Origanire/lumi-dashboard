@@ -10,7 +10,7 @@ export default function NotesWidget({ widget, onChange }) {
         maxLength={2000}
         placeholder="Une idée, un rappel, quelques mots…"
       />
-      <small>Vos notes restent sur ce navigateur.</small>
+      <small>Vos notes sont sauvegardées avec ce dashboard.</small>
     </div>
   );
 }

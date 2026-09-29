@@ -1,13 +1,21 @@
 use axum::{Json, extract::ConnectInfo, http::HeaderMap};
 use serde_json::{Value, json};
-use std::{net::{IpAddr, SocketAddr}, time::{SystemTime, UNIX_EPOCH}};
+use std::{
+    net::{IpAddr, SocketAddr},
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 pub async fn about(ConnectInfo(peer): ConnectInfo<SocketAddr>, headers: HeaderMap) -> Json<Value> {
     // Only enable behind the private reverse proxy, which overwrites this header.
     let ip = if std::env::var("TRUST_PROXY").as_deref() == Ok("true") {
-        headers.get("x-real-ip").and_then(|v| v.to_str().ok())
-            .and_then(|v| v.parse::<IpAddr>().ok()).unwrap_or(peer.ip())
-    } else { peer.ip() };
+        headers
+            .get("x-real-ip")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| v.parse::<IpAddr>().ok())
+            .unwrap_or(peer.ip())
+    } else {
+        peer.ip()
+    };
     Json(json!({
         "client": { "host": ip.to_string() },
         "server": {
@@ -19,12 +27,31 @@ pub async fn about(ConnectInfo(peer): ConnectInfo<SocketAddr>, headers: HeaderMa
 
 fn widget(name: &str, description: &str, params: &[(&str, &str)]) -> Value {
     let mut parameters = vec![json!({"name": "title", "type": "string"})];
-    parameters.extend(params.iter().map(|(name, kind)| json!({"name": name, "type": kind})));
+    if ![
+        "notes",
+        "focus",
+        "weather",
+        "gmail_compose",
+        "spotify_player",
+    ]
+    .contains(&name)
+    {
+        parameters.push(json!({"name":"refreshInterval", "type":"integer"}));
+    }
+    parameters.extend(
+        params
+            .iter()
+            .map(|(name, kind)| json!({"name": name, "type": kind})),
+    );
     json!({"name": name, "description": description, "params": parameters})
 }
 
 pub fn catalog() -> Value {
     json!([
+        {"name": "github", "widgets": [
+            widget("github_pushes", "Push récents du dépôt", &[("githubRepo", "string"), ("githubLimit", "integer")]),
+            widget("github_graph", "Graphe des commits", &[("githubRepo", "string")])
+        ]},
         {"name": "spotify", "widgets": [
             widget("spotify_player", "Lecture Spotify en cours", &[("clientId", "string"), ("refreshInterval", "integer")]),
             widget("spotify_top", "Titres Spotify favoris", &[("clientId", "string"), ("timeRange", "string"), ("limit", "integer")])

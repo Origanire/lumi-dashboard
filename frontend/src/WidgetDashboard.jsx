@@ -1,5 +1,8 @@
+import api from './api';
 import React, { useEffect, useRef, useState } from 'react';
 import Dialog from './components/Dialog';
+import DashboardWorkspace from './components/DashboardWorkspace';
+import { cleanWidgets } from './dashboardModel';
 import { parseRepository } from './widgets/github/githubClient';
 import useWidgetSize from './hooks/useWidgetSize';
 import CalendarProvider from './widgets/calendar/CalendarProvider';
@@ -60,7 +63,7 @@ const INITIAL_WIDGETS = [
 ];
 
 function widgetConfigKey(widget) {
-  const keys = WIDGET_CONFIG_KEYS[widget.type] || ['type', 'title'];
+  const keys = [...(WIDGET_CONFIG_KEYS[widget.type] || ['type', 'title']), 'refreshInterval'];
   return JSON.stringify(
     keys.reduce((config, key) => {
       const value = widget[key];
@@ -154,6 +157,7 @@ function WidgetCard({
   onResizeStart,
   arranging,
   onChange,
+  onMove,
 }) {
   const sizeRef = useWidgetSize();
   const type = WIDGET_TYPES[widget.type] || {
@@ -204,6 +208,7 @@ function WidgetCard({
           </button>
         </div>
       </div>
+      {arranging && <div className="widget-order-controls"><button type="button" aria-label={`Monter ${widget.title}`} onClick={() => onMove(widget.id, -1)}>↑ Monter</button><button type="button" aria-label={`Descendre ${widget.title}`} onClick={() => onMove(widget.id, 1)}>↓ Descendre</button></div>}
       <WidgetContent widget={widget} onChange={onChange} userId={userId} />
       {arranging && (
         <span className="drag-hint">
@@ -240,6 +245,10 @@ function WidgetEditor({ widget, mode, onClose, onSave }) {
     }
   );
   const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [subscriptions, setSubscriptions] = useState([]);
+  useEffect(() => { api('/services').then(setSubscriptions).catch(err => setError(err.message)); }, []);
+  const serviceFor = type => type.startsWith('github_') ? 'github' : type.startsWith('spotify_') ? 'spotify' : type.startsWith('gmail_') ? 'gmail' : ['agenda','calendar_week'].includes(type) ? 'google_calendar' : null;
   const type = WIDGET_TYPES[draft.type] || { label: draft.title };
 
   const update = (key, value) => {
@@ -266,7 +275,9 @@ function WidgetEditor({ widget, mode, onClose, onSave }) {
       try { normalized = { ...draft, githubRepo: parseRepository(draft.githubRepo) }; }
       catch (err) { setError(err.message); return; }
     }
-    const saved = onSave({ ...normalized, title: draft.title.trim() || type.label });
+    let validated;
+    try { validated = cleanWidgets([{ ...normalized, id: normalized.id ?? 'draft', title: draft.title.trim() || type.label }])[0]; } catch (err) { setError(err.message); return; }
+    const saved = onSave(validated);
     if (!saved)
       setError('Un widget avec exactement ces paramètres existe déjà.');
   }
@@ -287,7 +298,9 @@ function WidgetEditor({ widget, mode, onClose, onSave }) {
       <form onSubmit={submit}>
         {mode === 'add' && (
           <div className="widget-type-picker">
-            {Object.entries(WIDGET_TYPES).map(([key, value]) => (
+            <label>Rechercher un widget<input type="search" value={search} onChange={event => setSearch(event.target.value)} /></label>
+            <p className="field-hint">Activez vos services dans « Mon compte » pour ajouter leurs widgets.</p>
+            {Object.entries(WIDGET_TYPES).filter(([key]) => !serviceFor(key) || subscriptions.includes(serviceFor(key))).filter(([, meta]) => `${meta.label} ${meta.eyebrow}`.toLocaleLowerCase().includes(search.toLocaleLowerCase())).map(([key, value]) => (
               <button
                 type="button"
                 className={draft.type === key ? 'selected' : ''}
@@ -384,53 +397,13 @@ function WidgetEditor({ widget, mode, onClose, onSave }) {
 }
 
 export default function WidgetDashboard({ userId }) {
-  return <CalendarProvider key={userId}><DashboardWidgets key={userId} userId={userId} /></CalendarProvider>;
+  return <CalendarProvider key={userId}><DashboardWorkspace userId={userId} initialWidgets={INITIAL_WIDGETS}>{({ key, widgets, onChange }) => <DashboardWidgets key={key} userId={userId} widgets={widgets} onWidgetsChange={onChange} />}</DashboardWorkspace></CalendarProvider>;
 }
 
-function DashboardWidgets({ userId }) {
-  const storageKey = `lumi_dashboard_v1_${userId}`;
-  const [storageError, setStorageError] = useState('');
-  const [widgets, setWidgets] = useState(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(storageKey));
-      if (
-        Array.isArray(saved) &&
-        saved.every(
-          (w) =>
-            w &&
-            WIDGET_TYPES[w.type] &&
-            typeof w.title === 'string' &&
-            ['x', 'y', 'width', 'height'].every(
-              (k) => Number.isInteger(w[k]) && w[k] >= 1
-            ) &&
-            w.x + w.width <= 13 &&
-            w.y <= 100 &&
-            w.height <= 6
-        ) &&
-        new Set(saved.map((w) => w.id)).size === saved.length
-      )
-        return saved.map(widget => ({
-          ...widget,
-          width: Math.min(widget.width, WIDGET_TYPES[widget.type].maxWidth || 12),
-          height: Math.min(widget.height, WIDGET_TYPES[widget.type].maxHeight || 6),
-        }));
-    } catch {
-      /* Start with the default layout when storage is unavailable or invalid. */
-    }
-    return INITIAL_WIDGETS;
-  });
+function DashboardWidgets({ userId, widgets, onWidgetsChange }) {
+  const setWidgets = onWidgetsChange;
   const [arranging, setArranging] = useState(false);
   const [removed, setRemoved] = useState(null);
-  useEffect(() => {
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(widgets));
-      setStorageError('');
-    } catch {
-      setStorageError(
-        'La sauvegarde locale est indisponible. Gardez cette page ouverte pour conserver vos modifications.'
-      );
-    }
-  }, [widgets, storageKey]);
   const [editor, setEditor] = useState(null);
   const [draggedId, setDraggedId] = useState(null);
   const [dragPreview, setDragPreview] = useState(null);
@@ -639,16 +612,9 @@ function DashboardWidgets({ userId }) {
         <span>
           {arranging
             ? 'Déplacez les en-têtes ou modifiez la position dans le formulaire.'
-            : storageError
-              ? 'Sauvegarde indisponible'
-              : 'Enregistré sur ce navigateur'}
+            : 'Sauvegarde automatique dans votre compte'}
         </span>
       </div>
-      {storageError && (
-        <p role="alert" className="feedback error">
-          {storageError}
-        </p>
-      )}
       {removed && (
         <div className="undo-banner" role="status">
           <span>« {removed.title} » a été supprimé.</span>
@@ -732,6 +698,15 @@ function DashboardWidgets({ userId }) {
                 setRemoved(widgets.find((w) => w.id === id));
                 setWidgets((current) => current.filter((w) => w.id !== id));
               }}
+              onMove={(id, direction) => setWidgets(current => {
+                const ordered = [...current].sort((a,b) => a.y-b.y || a.x-b.x);
+                const index = ordered.findIndex(item => item.id === id);
+                const target = index + direction;
+                if (target < 0 || target >= ordered.length) return current;
+                [ordered[index], ordered[target]] = [ordered[target], ordered[index]];
+                let y = 1;
+                return ordered.map(item => { const result = { ...item, x:1, y }; y += item.height; return result; });
+              })}
               onResizeStart={startResize}
               onDragStart={(event, id) => {
                 setDraggedId(id);

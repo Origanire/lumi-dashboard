@@ -24,6 +24,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let listener = TcpListener::bind(&address).await?;
     println!("Backend Rust disponible sur http://{address}");
     let mailer = lumi_backend::mail::Mailer::from_env()?;
-    axum::serve(listener, lumi_backend::app_with_mailer(pool, mailer).into_make_service_with_connect_info::<std::net::SocketAddr>()).await?;
+    axum::serve(
+        listener,
+        lumi_backend::app_with_mailer(pool, mailer)
+            .into_make_service_with_connect_info::<std::net::SocketAddr>(),
+    )
+    .await?;
     Ok(())
 }
