@@ -1,3 +1,4 @@
+import { spotifyPopupState, waitForSpotifyPopup } from './spotifyPopup.js';
 import { SESSION_TOKEN_KEY } from '../../config.js';
 /**
  * Spotify Web API Client
@@ -128,37 +129,30 @@ export async function redirectToSpotifyAuthorize(customClientId, scopes = SPOTIF
     throw new Error('Un Client ID Spotify valide est requis.');
   }
 
-  // 1. Generate cryptographic temporary key (PKCE code verifier)
-  const verifier = generateRandomString(64);
-
-  // 2. Hash it with SHA-256 and base64url-encode to create the code challenge
-  const challenge = await generateCodeChallenge(verifier);
-
-  // 3. Generate CSRF state token
-  const state = generateRandomString(16);
-  const redirectUri = getSpotifyRedirectUri();
-
-  if (owner !== currentOwner()) throw new Error('Session Lumi modifiée.');
-  sessionStorage.setItem(PKCE_OWNER, owner);
-
-  // 4. Save verifier and state in sessionStorage for callback verification
-  sessionStorage.setItem(STORAGE_KEY_PKCE_VERIFIER, verifier);
-  sessionStorage.setItem(STORAGE_KEY_PKCE_STATE, state);
-  sessionStorage.setItem(STORAGE_KEY_ACTIVE_CLIENT_ID, clientId);
-
-  // 5. Build authorization URL
-  const params = new URLSearchParams({
-    client_id: clientId,
-    response_type: 'code',
-    redirect_uri: redirectUri,
-    code_challenge_method: 'S256',
-    code_challenge: challenge,
-    state,
-    scope: scopes.join(' '),
-  });
-
-  // 6. Redirect user to Spotify authorization page
-  window.location.href = `${SPOTIFY_AUTH_ENDPOINT}?${params.toString()}`;
+  // Open synchronously from the click, before WebCrypto yields, to avoid popup blocking.
+  const popup = window.open('about:blank', '_blank', 'popup,width=520,height=720');
+  if (!popup) throw new Error('Autorisez les fenêtres contextuelles pour connecter Spotify sans quitter Lumi.');
+  try {
+    const verifier = generateRandomString(64);
+    const challenge = await generateCodeChallenge(verifier);
+    const state = spotifyPopupState(generateRandomString(32));
+    const redirectUri = getSpotifyRedirectUri();
+    if (owner !== currentOwner()) throw new Error('Session Lumi modifiée.');
+    const params = new URLSearchParams({
+      client_id: clientId, response_type: 'code', redirect_uri: redirectUri,
+      code_challenge_method: 'S256', code_challenge: challenge, state, scope: scopes.join(' '),
+    });
+    // The verifier and tokens stay in the original window, never in the popup URL.
+    const result = waitForSpotifyPopup({
+      state, owner, currentOwner, popup,
+      exchange: code => exchangeCodeForToken(clientId, code, verifier, owner),
+    });
+    popup.location.href = `${SPOTIFY_AUTH_ENDPOINT}?${params.toString()}`;
+    return await result;
+  } catch (error) {
+    try { popup.close(); } catch {}
+    throw error;
+  }
 }
 
 /**
@@ -229,6 +223,7 @@ async function exchangeCodeForToken(clientId, code, verifier, owner) {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: body.toString(),
+    signal: AbortSignal.timeout(15000),
   });
 
   const data = await response.json();
@@ -270,6 +265,7 @@ export async function refreshSpotifyToken() {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: body.toString(),
+    signal: AbortSignal.timeout(15000),
   });
 
   const data = await response.json();

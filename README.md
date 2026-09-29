@@ -224,3 +224,5 @@ npm run test:e2e -w frontend
 Créer la base une seule fois. `frontend/playwright.config.js` lance des serveurs dédiés sur les ports 3001 et 5174 : arrêter les serveurs de développement avant les tests. La base `lumi_e2e` reste distincte de `lumi`. Les parcours vérifient l’édition, le rechargement, l’import/export, les instances, les abonnements, les conflits, une panne GitHub et le viewport mobile. La démonstration vidéo est exclue par défaut et s’exécute avec `DEMO_RECORD=1 npm run test:e2e -w frontend -- --grep @demo`.
 
 Les tests de services unitaires utilisent des réponses simulées. Ils ne remplacent pas les essais OAuth réels ni un audit de sécurité. Voir [la recette fournisseur](docs/RECETTE.md), [le script de soutenance](docs/PRESENTATION.md) et [le périmètre des bonus](docs/BONUS.md).
+
+La connexion Spotify s’ouvre dans une fenêtre dédiée : le dashboard reste ouvert et conserve les connexions Gmail, Calendar et GitHub en mémoire. Autoriser les fenêtres contextuelles pour Lumi. Un rechargement manuel de la page efface toujours les jetons externes.
