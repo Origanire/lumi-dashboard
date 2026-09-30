@@ -16,6 +16,7 @@ export default function DashboardWorkspace({ userId, initialWidgets, children })
   const [name, setName] = useState('');
   const [mount, setMount] = useState(0);
   const saving = useRef(false);
+  const importInput = useRef(null);
   const currentRef = useRef(current);
   currentRef.current = current;
   const alive = useRef(true);
@@ -92,15 +93,19 @@ export default function DashboardWorkspace({ userId, initialWidgets, children })
   }
   if (!current) return <section aria-live="polite"><p>{busy ? 'Chargement des dashboards…' : error}</p>{!busy && <button className="button" onClick={load}>Réessayer</button>}</section>;
   return <>
+    <div className="dashboard-controls">
     <div className="dashboard-toolbar">
-      <label>Dashboard <select aria-label="Dashboard actif" value={current.id} disabled={busy || dirty} onChange={event => { const selected = dashboards.find(item => item.id === event.target.value); setCurrent(selected); setSavedSignature(signature(selected)); setMount(v => v + 1); }}>{dashboards.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-      <button className="button button-secondary" disabled={busy || dirty} onClick={() => { setName(''); setDialog('create'); }}>Nouveau dashboard</button>
-      <button className="text-button" disabled={busy} onClick={() => { setName(current.name); setDialog('rename'); }}>Renommer</button>
-      <button className="text-button" onClick={download}>Exporter</button>
-      <label className="button button-secondary">Importer<input aria-label="Importer un dashboard" type="file" accept=".json,application/json" disabled={busy || dirty} onChange={async event => { const file = event.target.files[0]; event.target.value = ''; if (!file) return; try { if (file.size > 1_000_000) throw new Error('Fichier trop volumineux (1 Mo maximum).'); await create(parseDashboardExport(await file.text())); } catch (err) { setError(err.message); } }} /></label>
-      <button className="text-button danger" disabled={busy || dirty || dashboards.length <= 1} onClick={() => setDialog('delete')}>Supprimer le dashboard</button>
+      <label className="dashboard-picker"><span>Dashboard</span><select aria-label="Dashboard actif" value={current.id} disabled={busy || dirty} onChange={event => { const selected = dashboards.find(item => item.id === event.target.value); setCurrent(selected); setSavedSignature(signature(selected)); setMount(v => v + 1); }}>{dashboards.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+      <button className="button button-dark" disabled={busy || dirty} onClick={() => { setName(''); setDialog('create'); }}>Nouveau dashboard</button>
+      <div className="dashboard-tools" role="group" aria-label="Actions du dashboard">
+      <button className="button button-secondary" disabled={busy} onClick={() => { setName(current.name); setDialog('rename'); }}>Renommer</button>
+      <button className="button button-secondary" onClick={download}>Exporter</button>
+      <button type="button" className="button button-secondary" disabled={busy || dirty} onClick={() => importInput.current?.click()}>Importer</button><input ref={importInput} hidden aria-label="Importer un dashboard" type="file" accept=".json,application/json" disabled={busy || dirty} onChange={async event => { const file = event.target.files[0]; event.target.value = ''; if (!file) return; try { if (file.size > 1_000_000) throw new Error('Fichier trop volumineux (1 Mo maximum).'); await create(parseDashboardExport(await file.text())); } catch (err) { setError(err.message); } }} />
+      </div>
+      <button className="button button-secondary dashboard-delete" disabled={busy || dirty || dashboards.length <= 1} onClick={() => setDialog('delete')}>Supprimer le dashboard</button>
     </div>
-    <p role="status">{busy ? 'Synchronisation…' : dirty ? 'Modifications à enregistrer' : 'Enregistré dans votre compte'}</p>
+    <p className="dashboard-save-status" role="status" data-pending={busy || dirty}><span aria-hidden="true" className="dashboard-save-dot" />{busy ? 'Synchronisation…' : dirty ? 'Modifications à enregistrer' : 'Enregistré dans votre compte'}</p>
+    </div>
     {error && <div role="alert" className="feedback error"><p>{error}</p><button onClick={save} disabled={busy}>Réessayer la sauvegarde</button><button onClick={() => setDialog('reload')} disabled={busy}>Recharger la version serveur</button><p>Vous pouvez exporter vos modifications avant de recharger.</p></div>}
     {children({ key: `${current.id}-${mount}`, widgets: current.widgets, onChange: change })}
     {dialog && <Dialog titleId="dashboard-action-title" onClose={() => { if (!busy) setDialog(null); }}><h2 id="dashboard-action-title">{({ create: 'Nouveau dashboard', rename: 'Renommer le dashboard', delete: 'Supprimer ce dashboard ?', reload: 'Recharger la version serveur ?' })[dialog]}</h2>
