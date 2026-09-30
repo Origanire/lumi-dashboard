@@ -28,6 +28,7 @@ pub async fn about(ConnectInfo(peer): ConnectInfo<SocketAddr>, headers: HeaderMa
 fn widget(name: &str, description: &str, params: &[(&str, &str)]) -> Value {
     let mut parameters = vec![json!({"name": "title", "type": "string"})];
     if ![
+        "openai_chat",
         "notes",
         "focus",
         "weather",
@@ -48,6 +49,7 @@ fn widget(name: &str, description: &str, params: &[(&str, &str)]) -> Value {
 
 pub fn catalog() -> Value {
     json!([
+        {"name":"openai", "widgets":[widget("openai_chat", "Demande à OpenAI", &[])]},
         {"name": "github", "widgets": [
             widget("github_pushes", "Push récents du dépôt", &[("githubRepo", "string"), ("githubLimit", "integer")]),
             widget("github_graph", "Graphe des commits", &[("githubRepo", "string")])

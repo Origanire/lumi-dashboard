@@ -1,12 +1,12 @@
 import { SESSION_TOKEN_KEY } from './config';
 
-export default async function api(path, { body, ...options } = {}) {
+export default async function api(path, { body, timeoutMs = 10000, ...options } = {}) {
   const token = sessionStorage.getItem(SESSION_TOKEN_KEY);
   let response;
   try {
     response = await fetch(`/api${path}`, {
       ...options,
-      signal: AbortSignal.timeout(10000),
+      signal: AbortSignal.timeout(timeoutMs),
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),

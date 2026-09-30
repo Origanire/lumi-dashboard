@@ -1,3 +1,4 @@
+import OpenAIWidget from './openai/OpenAIWidget';
 import React from 'react';
 import GitHubWidget from './github/GitHubWidget';
 import GmailWidget, { GmailComposeWidget } from './gmail/GmailWidget';
@@ -19,6 +20,7 @@ export {
 };
 
 export const WIDGET_TYPES = {
+  openai_chat: { label: 'ChatGPT · Demander à l’IA', eyebrow: 'OpenAI', icon: '✦', color: 'mint', defaultWidth: 6, defaultHeight: 4 },
   github_pushes: { label: 'GitHub · Push', eyebrow: 'Activité du dépôt', icon: '⑂', color: 'blue', defaultWidth: 6, defaultHeight: 3 },
   github_graph: { label: 'GitHub · Graphe', eyebrow: 'Historique des commits', icon: '⑂', color: 'blue', defaultWidth: 6, defaultHeight: 4 },
   gmail_unread: { label: 'Gmail · Non lus', eyebrow: 'Boîte de réception', icon: '✉', color: 'red', defaultWidth: 6, defaultHeight: 3 },
@@ -82,6 +84,7 @@ export const WIDGET_TYPES = {
 };
 
 export const WIDGET_CONFIG_KEYS = {
+  openai_chat: ['type', 'title'],
   github_pushes: ['type', 'title', 'githubRepo', 'githubLimit'],
   github_graph: ['type', 'title', 'githubRepo'],
   gmail_unread: ['type', 'title', 'gmailClientId', 'gmailLimit'],
@@ -97,6 +100,7 @@ export const WIDGET_CONFIG_KEYS = {
 
 export function WidgetContent({ widget, onChange, userId }) {
   switch (widget.type) {
+    case 'openai_chat': return <OpenAIWidget />;
     case 'github_pushes':
     case 'github_graph': return <GitHubWidget widget={widget} userId={userId} />;
     case 'gmail_unread': return <GmailWidget widget={widget} />;
@@ -121,7 +125,7 @@ export function WidgetContent({ widget, onChange, userId }) {
 }
 
 export function WidgetEditorFields({ draft, update }) {
-  const refreshing = !['notes', 'focus', 'weather', 'gmail_compose', 'spotify_player'].includes(draft.type);
+  const refreshing = !['openai_chat', 'notes', 'focus', 'weather', 'gmail_compose', 'spotify_player'].includes(draft.type);
   return <>{refreshing && <><label htmlFor="widget-refresh">Rafraîchissement (secondes)</label><input id="widget-refresh" type="number" min={draft.type.startsWith('github_') ? 300 : 30} max="3600" required value={draft.refreshInterval ?? (draft.type.startsWith('github_') ? 300 : 60)} onChange={event => update('refreshInterval', Number(event.target.value))} /><p className="field-hint">Actualisation lorsque la page est visible. Un intervalle plus long réduit les appels au fournisseur.</p></>}<SpecificEditorFields draft={draft} update={update} /></>;
 }
 function SpecificEditorFields({ draft, update }) {

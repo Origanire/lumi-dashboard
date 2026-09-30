@@ -235,3 +235,17 @@ async fn login_attempts_are_limited_before_password_work(pool: PgPool) {
         200
     );
 }
+
+#[sqlx::test]
+async fn openai_subscription_and_prompt_validation(pool: PgPool) {
+    let app = lumi_backend::app(pool.clone());
+    assert_eq!(request(&app, "POST", "/api/ai/ask", "", json!({"prompt":"Bonjour"})).await.0, 401);
+    assert_eq!(request(&app, "GET", "/api/ai/status", "", Value::Null).await.0, 401);
+    let (token, user) = account(&pool, &app, "ai@test.local").await;
+    sqlx::query("INSERT INTO service_subscriptions(user_id,service) VALUES($1,'openai')")
+        .bind(uuid::Uuid::parse_str(&user).unwrap()).execute(&pool).await.unwrap();
+    assert_eq!(request(&app, "GET", "/api/ai/status", &token, Value::Null).await.0, 200);
+    for prompt in [" ".to_string(), "a".repeat(8001)] {
+        assert_eq!(request(&app, "POST", "/api/ai/ask", &token, json!({"prompt":prompt})).await.0, 400);
+    }
+}

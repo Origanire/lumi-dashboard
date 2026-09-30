@@ -46,7 +46,7 @@ fn validate(input: &DashboardInput) -> Result<(), ApiError> {
             "notes" => &["content"],
             "focus" => &["duration", "completed"],
             "weather" => &["city", "temperature", "condition"],
-            "agenda" | "calendar_week" => &[],
+            "agenda" | "calendar_week" | "openai_chat" => &[],
             "github_pushes" | "github_graph" => &["githubRepo", "githubLimit"],
             "gmail_unread" | "gmail_compose" => &["gmailClientId", "gmailLimit", "gmailAccount"],
             "spotify_player" | "spotify_top" => &["clientId", "timeRange", "limit"],
@@ -241,7 +241,7 @@ pub async fn subscribe(
     State(state): State<AppState>,
     Path(service): Path<String>,
 ) -> Result<StatusCode, ApiError> {
-    if !["spotify", "gmail", "google_calendar", "github"].contains(&service.as_str()) {
+    if !["spotify", "gmail", "google_calendar", "github", "openai"].contains(&service.as_str()) {
         return Err(ApiError::invalid("Service inconnu."));
     }
     sqlx::query(

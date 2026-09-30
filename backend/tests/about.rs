@@ -27,7 +27,7 @@ async fn public_catalog_has_client_time_and_typed_parameters() {
     assert_eq!(value["client"]["host"], "192.0.2.42");
     assert!(value["server"]["current_time"].as_u64().unwrap() > 1_700_000_000);
     let services = value["server"]["services"].as_array().unwrap();
-    assert_eq!(services.len(), 5);
+    assert_eq!(services.len(), 6);
     let mut count = 0;
     for service in services {
         for widget in service["widgets"].as_array().unwrap() {
@@ -38,7 +38,7 @@ async fn public_catalog_has_client_time_and_typed_parameters() {
             }
         }
     }
-    assert_eq!(count, 11);
+    assert_eq!(count, 12);
 }
 
 #[test]

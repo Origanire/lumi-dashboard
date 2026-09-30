@@ -3,7 +3,7 @@
 État du 29 septembre 2026. `[x]` signifie implémenté et vérifié dans le périmètre décrit ; `[ ]` désigne une validation encore nécessaire. Les tests simulés ne valent pas validation OAuth réelle.
 
 **Équipe : Milo Bousquet et Nathan Muzay, contribution commune à l’ensemble du projet. X = 2.**
-Objectif du sujet : **3 services minimum et 6 widgets de services minimum**. Le code contient 4 intégrations externes, 8 widgets externes et 3 outils/démonstrations locaux, soit 11 types.
+Objectif du sujet : **3 services minimum et 6 widgets de services minimum**. Le code contient 5 intégrations externes, 9 widgets externes et 3 outils/démonstrations locaux, soit 12 types.
 
 ## Must have — obligatoire
 
@@ -30,7 +30,7 @@ Objectif du sujet : **3 services minimum et 6 widgets de services minimum**. Le 
 - [x] Stack Docker complète à la racine : React/Nginx, Rust, PostgreSQL et Mailpit.
 - [x] Construction et démarrage depuis un clone propre : `npm run check:clean` valide le clone, les tests, les builds Docker, les migrations et les endpoints HTTP.
 - [ ] Vérification finale de l’application sur `http://localhost:8080` après reconstruction.
-- [x] `GET /about.json` : IP client, heure Unix, catalogue des 11 widgets et paramètres typés ; test de cohérence frontend/backend ajouté.
+- [x] `GET /about.json` : IP client, heure Unix, catalogue des 12 widgets et paramètres typés ; test de cohérence frontend/backend ajouté.
 - [x] Présentation et scénario de démonstration préparés dans [PRESENTATION.md](docs/PRESENTATION.md). Répétition des parcours OAuth à effectuer avec les comptes de l’équipe.
 - [x] Vérification finale du contenu livré et des artefacts ; bonus identifiés dans [BONUS.md](docs/BONUS.md).
 
@@ -105,3 +105,5 @@ Objectif du sujet : **3 services minimum et 6 widgets de services minimum**. Le 
 Les applications OAuth sont déclarées prêtes sur `http://localhost:5174`. Gmail/Calendar peuvent utiliser cette origine. Spotify exige `http://127.0.0.1:5174/` comme retour, à autoriser chez le fournisseur. Aucun navigateur connecté aux comptes de l’équipe n’est accessible à l’agent.
 
 Terminer les essais de [RECETTE.md](docs/RECETTE.md), puis fermer les trois cases fournisseurs ci-dessus. Aucun envoi Gmail, événement privé ou consentement externe n’est déclaré validé sans essai réel.
+
+- [x] Widget OpenAI : saisie et réponse dans le dashboard, clé serveur, service activable, gestion des erreurs et tests automatisés. Appel réel à valider après configuration de `OPENAI_API_KEY`.

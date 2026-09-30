@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../api';
-const services = { spotify: ['Spotify', 'Lecture en cours et titres favoris'], gmail: ['Gmail', 'Messages non lus et rédaction'], google_calendar: ['Google Calendar', 'Échéances et planning'], github: ['GitHub', 'Push récents et graphe des commits'] };
+const services = { openai: ['OpenAI / ChatGPT', 'Envoyer une demande et lire la réponse dans Lumi'], spotify: ['Spotify', 'Lecture en cours et titres favoris'], gmail: ['Gmail', 'Messages non lus et rédaction'], google_calendar: ['Google Calendar', 'Échéances et planning'], github: ['GitHub', 'Push récents et graphe des commits'] };
 export default function ServiceSubscriptions() {
   const [subscriptions, setSubscriptions] = useState(null);
   const [error, setError] = useState('');

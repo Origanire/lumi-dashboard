@@ -18,6 +18,7 @@ pub mod email_auth;
 mod error;
 pub mod google_auth;
 pub mod mail;
+pub mod openai;
 pub mod workspace;
 
 pub const DEMO_EMAIL: &str = "demo@lumi.local";
@@ -54,7 +55,7 @@ impl Modify for Security {
 #[derive(OpenApi)]
 #[openapi(
     info(title = "Lumi API", version = "0.3.0"),
-    paths(workspace::list, workspace::create, workspace::update, workspace::remove, workspace::services, workspace::subscribe, workspace::unsubscribe, admin::list, admin::roles, admin::revoke, google_auth::challenge, google_auth::login, google_auth::link, health, auth::register, auth::login, auth::current_user, auth::logout, email_auth::resend_verification, email_auth::confirm_email, email_auth::request_magic, email_auth::consume_magic, email_auth::forgot_password, email_auth::reset_password),
+    paths(openai::ask, workspace::list, workspace::create, workspace::update, workspace::remove, workspace::services, workspace::subscribe, workspace::unsubscribe, admin::list, admin::roles, admin::revoke, google_auth::challenge, google_auth::login, google_auth::link, health, auth::register, auth::login, auth::current_user, auth::logout, email_auth::resend_verification, email_auth::confirm_email, email_auth::request_magic, email_auth::consume_magic, email_auth::forgot_password, email_auth::reset_password),
     components(schemas(HealthResponse, MessageResponse)),
     modifiers(&Security)
 )]
@@ -84,6 +85,8 @@ pub fn app(pool: PgPool) -> Router {
 pub fn app_with_mailer(pool: PgPool, mailer: mail::Mailer) -> Router {
     Router::new()
         .route("/api/health", get(health))
+        .route("/api/ai/status", get(openai::status))
+        .route("/api/ai/ask", post(openai::ask))
         .route("/api/dashboards", get(workspace::list).post(workspace::create))
         .route("/api/dashboards/{id}", axum::routing::put(workspace::update).delete(workspace::remove))
         .route("/api/admin/users", get(admin::list))

@@ -7,6 +7,8 @@ services:
       DATABASE_URL: postgres://lumi:${POSTGRES_PASSWORD:-lumi-local}@postgres:5432/lumi
       BIND_ADDRESS: 0.0.0.0:3001
       TRUST_PROXY: "true"
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
       GOOGLE_OIDC_CLIENT_ID: ${GOOGLE_OIDC_CLIENT_ID:-}
       APP_URL: ${DOCKER_APP_URL:-http://localhost:8080}
       SMTP_HOST: mailpit

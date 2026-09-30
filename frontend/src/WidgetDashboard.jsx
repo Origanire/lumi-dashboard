@@ -247,9 +247,21 @@ function WidgetEditor({ widget, mode, onClose, onSave }) {
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [subscriptions, setSubscriptions] = useState([]);
+  const [activating, setActivating] = useState(false);
   useEffect(() => { api('/services').then(setSubscriptions).catch(err => setError(err.message)); }, []);
-  const serviceFor = type => type.startsWith('github_') ? 'github' : type.startsWith('spotify_') ? 'spotify' : type.startsWith('gmail_') ? 'gmail' : ['agenda','calendar_week'].includes(type) ? 'google_calendar' : null;
+  const serviceFor = type => type === 'openai_chat' ? 'openai' : type.startsWith('github_') ? 'github' : type.startsWith('spotify_') ? 'spotify' : type.startsWith('gmail_') ? 'gmail' : ['agenda','calendar_week'].includes(type) ? 'google_calendar' : null;
   const type = WIDGET_TYPES[draft.type] || { label: draft.title };
+  const selectedService = serviceFor(draft.type);
+  const needsActivation = mode === 'add' && selectedService && !subscriptions.includes(selectedService);
+  async function activateService() {
+    setActivating(true); setError('');
+    try {
+      await api(`/services/${selectedService}`, { method: 'PUT' });
+      setSubscriptions(items => [...items, selectedService]);
+      window.dispatchEvent(new Event('lumi:subscriptions-changed'));
+    } catch (err) { setError(err.message); }
+    finally { setActivating(false); }
+  }
 
   const update = (key, value) => {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -270,6 +282,7 @@ function WidgetEditor({ widget, mode, onClose, onSave }) {
 
   function submit(event) {
     event.preventDefault();
+    if (needsActivation || activating) return;
     let normalized = draft;
     if (draft.type.startsWith('github_')) {
       try { normalized = { ...draft, githubRepo: parseRepository(draft.githubRepo) }; }
@@ -299,8 +312,8 @@ function WidgetEditor({ widget, mode, onClose, onSave }) {
         {mode === 'add' && (
           <div className="widget-type-picker">
             <label>Rechercher un widget<input type="search" value={search} onChange={event => setSearch(event.target.value)} /></label>
-            <p className="field-hint">Activez vos services dans « Mon compte » pour ajouter leurs widgets.</p>
-            {Object.entries(WIDGET_TYPES).filter(([key]) => !serviceFor(key) || subscriptions.includes(serviceFor(key))).filter(([, meta]) => `${meta.label} ${meta.eyebrow}`.toLocaleLowerCase().includes(search.toLocaleLowerCase())).map(([key, value]) => (
+            <p className="field-hint">Choisissez un widget. Si nécessaire, activez son service ci-dessous.</p>
+            {Object.entries(WIDGET_TYPES).filter(([, meta]) => `${meta.label} ${meta.eyebrow}`.toLocaleLowerCase().includes(search.toLocaleLowerCase())).map(([key, value]) => (
               <button
                 type="button"
                 className={draft.type === key ? 'selected' : ''}
@@ -314,6 +327,7 @@ function WidgetEditor({ widget, mode, onClose, onSave }) {
             ))}
           </div>
         )}
+        {needsActivation && <div role="status"><p>Activez le service pour ajouter ce widget.</p><button type="button" className="button button-secondary" disabled={activating} onClick={activateService}>{activating ? 'Activation…' : `Activer le service ${selectedService === 'openai' ? 'OpenAI' : type.eyebrow}`}</button></div>}
         <label htmlFor="widget-title">Nom du widget</label>
         <input
           id="widget-title"
@@ -385,7 +399,7 @@ function WidgetEditor({ widget, mode, onClose, onSave }) {
             {error}
           </p>
         )}
-        <button className="button button-dark widget-save" type="submit">
+        <button className="button button-dark widget-save" type="submit" disabled={!!needsActivation || activating}>
           {mode === 'add'
             ? 'Ajouter au dashboard'
             : 'Enregistrer les changements'}{' '}

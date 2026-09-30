@@ -326,3 +326,8 @@
 }
 
 
+
+.openai-widget { overflow:auto; min-height:0; }
+.openai-widget form { display:grid; gap:12px; }
+.openai-widget textarea { width:100%; resize:vertical; min-height:90px; }
+.openai-answer { white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.6; }

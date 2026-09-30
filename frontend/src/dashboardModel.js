@@ -1,5 +1,6 @@
 const common = ['id', 'type', 'title', 'x', 'y', 'width', 'height', 'refreshInterval'];
 const fields = {
+  openai_chat: [],
   notes: ['content'], focus: ['duration', 'completed'], weather: ['city', 'temperature', 'condition'],
   agenda: [], calendar_week: [], github_pushes: ['githubRepo', 'githubLimit'], github_graph: ['githubRepo'],
   gmail_unread: ['gmailClientId', 'gmailLimit'], gmail_compose: ['gmailClientId', 'gmailAccount'],

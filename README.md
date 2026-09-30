@@ -158,6 +158,7 @@ Tous les widgets possèdent un titre et une taille configurables.
 | --- | --- | --- | --- |
 | GitHub | Push récents | Dépôt, 1–20 événements, intervalle 300–3600 s | Dépôts publics ou jeton personnel, cache mémoire 30 s |
 | GitHub | Graphe des commits | Dépôt, intervalle 300–3600 s | Branches et commits, historique des observations en session |
+| OpenAI | Demander à l’IA | Titre et taille | Demande explicite, clé API côté serveur |
 | Spotify | Lecture en cours | Client ID, rafraîchissement 5–120 s | OAuth PKCE, validation avec compte réel restante |
 | Spotify | Top titres | Client ID, période, 1–10 titres, intervalle 30–3600 s | Actualisation périodique |
 | Gmail | Non lus | Client ID, 1–20 messages, intervalle 30–3600 s | OAuth, lecture et actions explicites |
@@ -226,3 +227,11 @@ Créer la base une seule fois. `frontend/playwright.config.js` lance des serveur
 Les tests de services unitaires utilisent des réponses simulées. Ils ne remplacent pas les essais OAuth réels ni un audit de sécurité. Voir [la recette fournisseur](docs/RECETTE.md), [le script de soutenance](docs/PRESENTATION.md) et [le périmètre des bonus](docs/BONUS.md).
 
 La connexion Spotify s’ouvre dans une fenêtre dédiée : le dashboard reste ouvert et conserve les connexions Gmail, Calendar et GitHub en mémoire. Autoriser les fenêtres contextuelles pour Lumi. Un rechargement manuel de la page efface toujours les jetons externes.
+
+## Widget OpenAI / ChatGPT
+
+Renseigner `OPENAI_API_KEY` dans le `.env` racine, puis redémarrer `npm run dev`. `OPENAI_MODEL` sélectionne le modèle serveur (défaut `gpt-4.1-mini`). La clé reste privée côté Rust, jamais dans `VITE_*`, dans un widget ou dans son export.
+
+Activer **OpenAI / ChatGPT** dans **Mon compte → Mes services**, puis ajouter **ChatGPT · Demander à l’IA**. Saisir un texte et cliquer sur Envoyer. Chaque demande est indépendante ; aucun envoi automatique, historique de conversation ou accès aux autres widgets. Le texte est transmis à OpenAI uniquement lors de l’envoi. Le résultat reste en mémoire dans le widget, avec effacement manuel possible.
+
+Le service utilise l’[API Responses](https://developers.openai.com/api/docs/guides/migrate-to-responses) avec `store: false`, une réponse limitée à 1 500 tokens et cinq demandes par minute par utilisateur. Une clé API OpenAI valide et un compte API disposant d’un quota sont nécessaires. Les éventuelles erreurs de quota ou configuration s’affichent dans le widget.
