@@ -2,7 +2,6 @@ import useRefresh from '../../hooks/useRefresh';
 import React, { useEffect, useRef, useState } from 'react';
 import { authorizeGmail, gmailLink, gmailRequest, listUnread, loadGoogleIdentity, mailLimit, messageChange } from './gmailClient';
 
-export { default as GmailComposeWidget } from './GmailComposeWidget';
 
 export default function GmailWidget({ widget }) {
   const [auth, setAuth] = useState(null);

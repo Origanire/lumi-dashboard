@@ -37,7 +37,7 @@ La disposition et les notes sont sauvegardées localement, par compte. Les conte
 ## Organisation du frontend
 
 - `frontend/src/main.jsx` démarre React et importe `style.css`.
-- `frontend/src/App.jsx` contient les écrans et la gestion de session.
+- `frontend/src/App.jsx` gère la session ; `frontend/src/pages/` contient les écrans et `frontend/src/dashboard/` la composition des widgets.
 - `frontend/src/api.js` centralise les requêtes vers le backend.
 - `frontend/src/config.js` partage les libellés des rôles, les rôles proposés à l'inscription et la clé de session.
 - `frontend/src/style.css` importe les modules de `frontend/src/styles/` dans l’ordre de la cascade.

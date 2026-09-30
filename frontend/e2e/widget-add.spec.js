@@ -19,7 +19,7 @@ test('a new service is visible, can be activated, and its widget is saved', asyn
   await page.evaluate(async () => {
     const { default: React } = await import('/node_modules/.vite/deps/react.js');
     const { default: { createRoot } } = await import('/node_modules/.vite/deps/react-dom_client.js');
-    const { default: Dashboard } = await import('/src/WidgetDashboard.jsx');
+    const { default: Dashboard } = await import('/src/dashboard/WidgetDashboard.jsx');
     const host = document.createElement('div');
     document.body.append(host);
     createRoot(host).render(React.createElement(Dashboard, { userId: 'test-user' }));

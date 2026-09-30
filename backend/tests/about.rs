@@ -43,7 +43,7 @@ async fn public_catalog_has_client_time_and_typed_parameters() {
 
 #[test]
 fn catalog_matches_frontend_widget_types() {
-    let source = include_str!("../../frontend/src/widgets/index.jsx");
+    let source = include_str!("../../frontend/src/widgets/catalog.js");
     let types = source
         .split("export const WIDGET_TYPES = {")
         .nth(1)

@@ -14,7 +14,7 @@ Objectif du sujet : **3 services minimum et 6 widgets de services minimum**. Le 
 - [x] Connexion et déconnexion ; liens de connexion et réinitialisation également disponibles.
 - [x] Protection des pages privées et vérification de session côté serveur.
 - [x] Gestion des abonnements aux services dans Mon compte ; préférences stockées en PostgreSQL et catalogue filtré. Les connexions fournisseurs restent distinctes des abonnements.
-- [ ] Valider réellement au moins 3 services. Spotify, Gmail, Calendar et GitHub codés ; GitHub public testé réellement. Comptes OAuth déclarés prêts par l’équipe, essais Google/Spotify à consigner dans [RECETTE.md](docs/RECETTE.md).
+- [ ] Valider réellement au moins 3 services. Spotify, Gmail, Calendar et GitHub codés ; GitHub public testé réellement. Comptes OAuth déclarés prêts par l’équipe, essais Google/Spotify à consigner dans [RECETTE.md](RECETTE.md).
 - [ ] Valider réellement au moins 6 widgets externes. Huit implémentés ; deux GitHub vérifiés sur dépôt public, validation des six Google/Spotify restante.
 - [x] Au moins un paramètre configurable pour chaque widget : titre, paramètres métier, taille et/ou fréquence.
 - [x] Ajout d’un widget et configuration avant ajout.
@@ -31,8 +31,8 @@ Objectif du sujet : **3 services minimum et 6 widgets de services minimum**. Le 
 - [x] Construction et démarrage depuis un clone propre : `npm run check:clean` valide le clone, les tests, les builds Docker, les migrations et les endpoints HTTP.
 - [ ] Vérification finale de l’application sur `http://localhost:8080` après reconstruction.
 - [x] `GET /about.json` : IP client, heure Unix, catalogue des 12 widgets et paramètres typés ; test de cohérence frontend/backend ajouté.
-- [x] Présentation et scénario de démonstration préparés dans [PRESENTATION.md](docs/PRESENTATION.md). Répétition des parcours OAuth à effectuer avec les comptes de l’équipe.
-- [x] Vérification finale du contenu livré et des artefacts ; bonus identifiés dans [BONUS.md](docs/BONUS.md).
+- [x] Présentation et scénario de démonstration préparés dans [PRESENTATION.md](PRESENTATION.md). Répétition des parcours OAuth à effectuer avec les comptes de l’équipe.
+- [x] Vérification finale du contenu livré et des artefacts ; bonus identifiés dans [BONUS.md](BONUS.md).
 
 ### Sécurité
 
@@ -52,7 +52,7 @@ Objectif du sujet : **3 services minimum et 6 widgets de services minimum**. Le 
 - [x] Installation, configuration, développement et lancement Docker documentés.
 - [x] Commandes de tests unitaires, backend et navigateur documentées.
 - [x] Utilisation : abonnements, dashboards multiples, sauvegarde, conflits, import/export, administration et mobile.
-- [x] Documentation des nouvelles API dans Swagger et [workspace.md](backend/docs/workspace.md).
+- [x] Documentation des nouvelles API dans Swagger et [workspace.md](api/workspace.md).
 
 ## Should have — fortement recommandé
 
@@ -98,12 +98,12 @@ Objectif du sujet : **3 services minimum et 6 widgets de services minimum**. Le 
 - 4 parcours navigateur réussis ; scénario vidéo exécuté séparément.
 - Construction Docker réussie ; contrôle du clone propre et démarrage final à consigner.
 - `npm audit --omit=dev` : aucune vulnérabilité signalée. Ce résultat ne constitue pas un audit de sécurité complet.
-- Détails et limites : [VALIDATION.md](docs/VALIDATION.md).
+- Détails et limites : [VALIDATION.md](VALIDATION.md).
 
 ## Validation nécessitant les comptes de l’équipe
 
 Les applications OAuth sont déclarées prêtes sur `http://localhost:5174`. Gmail/Calendar peuvent utiliser cette origine. Spotify exige `http://127.0.0.1:5174/` comme retour, à autoriser chez le fournisseur. Aucun navigateur connecté aux comptes de l’équipe n’est accessible à l’agent.
 
-Terminer les essais de [RECETTE.md](docs/RECETTE.md), puis fermer les trois cases fournisseurs ci-dessus. Aucun envoi Gmail, événement privé ou consentement externe n’est déclaré validé sans essai réel.
+Terminer les essais de [RECETTE.md](RECETTE.md), puis fermer les trois cases fournisseurs ci-dessus. Aucun envoi Gmail, événement privé ou consentement externe n’est déclaré validé sans essai réel.
 
 - [x] Widget OpenAI : saisie et réponse dans le dashboard, clé serveur, service activable, gestion des erreurs et tests automatisés. Appel réel à valider après configuration de `OPENAI_API_KEY`.

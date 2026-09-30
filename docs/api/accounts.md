@@ -76,7 +76,7 @@ npm run dev
 
 La première migration est conservée pour ne pas invalider les bases où elle a déjà été appliquée. La seconde supprime les tables widgets/dashboard, convertit les anciens profils `personal`/`client` en `perso`, les permissions `administrator` en `admin`, et attribue `employe` aux membres d'entreprises existantes. Les anciennes sessions sont supprimées afin d'imposer une connexion avec rôle. Les comptes et les entreprises sont conservés.
 
-Swagger est disponible sur `/api/docs`. Le profil est choisi uniquement à l’inscription. Les widgets sont affichés et sauvegardés localement par compte dans le navigateur ; aucune API de widgets n’est exposée. Les quatre comptes de test sont décrits dans [README-COMPTES.md](../../README-COMPTES.md) et créés explicitement via `npm run seed:test`.
+Swagger est disponible sur `/api/docs`. Le profil est choisi uniquement à l’inscription. Les widgets sont sauvegardés par compte via les API de tableaux de bord ; voir [le contrat workspace](workspace.md). Les quatre comptes de test sont décrits dans [Comptes de test](../COMPTES.md) et créés explicitement via `npm run seed:test`.
 
 ## Vérifications
 

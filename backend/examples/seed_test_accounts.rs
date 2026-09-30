@@ -91,6 +91,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .bind(id).bind(company_id).execute(&mut *tx).await?;
     }
     tx.commit().await?;
-    println!("Les 4 comptes de test sont prêts. Identifiants : README-COMPTES.md");
+    println!("Les 4 comptes de test sont prêts. Identifiants : docs/COMPTES.md");
     Ok(())
 }

@@ -8,11 +8,11 @@ L'application propose des dashboards personnalisables, sauvegardés dans le comp
 
 Lumi rassemble des notes, un minuteur de concentration et des widgets dans un tableau de bord personnalisable. L’interface React communique avec une API Rust pour les comptes et les sessions.
 
-Le sujet du projet est disponible dans [dashboard-project.pdf](./dashboard-project.pdf).
+Le sujet du projet est disponible dans [dashboard-project.pdf](docs/dashboard-project.pdf).
 
-La liste des tâches et des priorités est disponible dans [TODO.md](./TODO.md).
+La liste des tâches et des priorités est disponible dans [TODO.md](docs/TODO.md).
 
-Les règles visuelles et les composants de référence sont décrits dans [DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md).
+Les règles visuelles et les composants de référence sont décrits dans [DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md).
 
 ## Technologies utilisées
 
@@ -58,9 +58,9 @@ Le périmètre actuel couvre la création de compte et la connexion avec les rô
 
 Le formulaire de connexion demande uniquement l’e-mail et le mot de passe. Le profil se choisit à l’inscription ; le rôle de connexion est déterminé par le serveur. Le tableau de bord propose des widgets personnalisables, sauvegardés dans PostgreSQL par compte. Les anciens widgets locaux sont importés lors de la création du premier dashboard serveur.
 
-Les quatre comptes de test (un par rôle), leurs identifiants et la commande `npm run seed:test` sont documentés dans [README-COMPTES.md](./README-COMPTES.md).
+Les quatre comptes de test (un par rôle), leurs identifiants et la commande `npm run seed:test` sont documentés dans [Comptes de test](docs/COMPTES.md).
 
-Voir le [contrat API des comptes](backend/docs/accounts.md) pour le modèle relationnel, les exemples de requêtes et la migration depuis la première version.
+Voir le [contrat API des comptes](docs/api/accounts.md) pour le modèle relationnel, les exemples de requêtes et la migration depuis la première version.
 
 ## Lancement
 
@@ -88,7 +88,7 @@ Le lien de connexion remplace le mot de passe ; ce parcours n’est pas une seco
 
 ### Widgets Google Calendar
 
-Deux widgets permettent de consulter les échéances du mois et le planning semaine/jour, puis de créer des événements avec priorité, labels techniques et échéance. Ils utilisent l’agenda Google principal du compte connecté. Configurer `VITE_GOOGLE_CLIENT_ID` dans `.env` puis redémarrer le frontend : voir le [guide Google Calendar](frontend/docs/google-calendar.md).
+Deux widgets permettent de consulter les échéances du mois et le planning semaine/jour, puis de créer des événements avec priorité, labels techniques et échéance. Ils utilisent l’agenda Google principal du compte connecté. Configurer `VITE_GOOGLE_CLIENT_ID` dans `.env` puis redémarrer le frontend : voir le [guide Google Calendar](docs/integrations/google-calendar.md).
 
 Pour connecter un agenda en tant qu'utilisateur :
 
@@ -97,7 +97,7 @@ Pour connecter un agenda en tant qu'utilisateur :
 3. Cliquer sur **Connecter Google Calendar**.
 4. Choisir le compte Google à utiliser dans la fenêtre Google et accepter l'accès aux événements.
 
-La connexion est valable pour la session de la page. Elle n'enregistre ni mot de passe Google ni secret dans Lumi. Si le bouton n'est pas disponible, l'application doit d'abord être configurée par la personne qui la déploie, comme indiqué dans le [guide complet Google Calendar](frontend/docs/google-calendar.md).
+La connexion est valable pour la session de la page. Elle n'enregistre ni mot de passe Google ni secret dans Lumi. Si le bouton n'est pas disponible, l'application doit d'abord être configurée par la personne qui la déploie, comme indiqué dans le [guide complet Google Calendar](docs/integrations/google-calendar.md).
 
 ### Documentation interactive — Swagger UI
 
@@ -122,7 +122,7 @@ npm start
 npm test
 ```
 
-Les tests backend utilisent `DATABASE_URL` et une base PostgreSQL isolée par scénario ; le compte de test doit pouvoir créer des bases. Ils vérifient l’inscription, les rôles cumulables, le contrôle du rôle de connexion, les sessions et l’unicité des comptes. Voir les [instructions détaillées](backend/docs/accounts.md#vérifications).
+Les tests backend utilisent `DATABASE_URL` et une base PostgreSQL isolée par scénario ; le compte de test doit pouvoir créer des bases. Ils vérifient l’inscription, les rôles cumulables, le contrôle du rôle de connexion, les sessions et l’unicité des comptes. Voir les [instructions détaillées](docs/api/accounts.md#vérifications).
 
 ## Équipe
 
@@ -131,7 +131,7 @@ Les tests backend utilisent `DATABASE_URL` et une base PostgreSQL isolée par sc
 
 ## Licence
 
-La licence reste à définir. Voir [LICENCE.md](./LICENCE.md).
+La licence reste à définir. Voir [LICENCE.md](LICENCE.md).
 
 ## Lancement complet avec Docker
 
@@ -169,9 +169,11 @@ Tous les widgets possèdent un titre et une taille configurables.
 | Local | Focus | Durée 5–120 minutes | Minuteur local |
 | Démonstration | Météo | Ville | Données fictives, aucun service météo connecté |
 
-Voir les guides [Calendar](frontend/docs/google-calendar.md) , [Gmail](frontend/src/widgets/gmail/README.md) et [GitHub](frontend/src/widgets/github/README.md). Les autorisations externes nécessitent une configuration fournisseur ; leur présence dans le catalogue ne prouve pas une validation de bout en bout. Le catalogue machine est disponible publiquement sur `/about.json`, avec l’IP du client, l’heure Unix et les paramètres de type `integer` ou `string`. Le groupe `local` y identifie les outils locaux et la démonstration, sans constituer un service externe.
+Voir les guides [Calendar](docs/integrations/google-calendar.md) , [Gmail](docs/integrations/gmail.md) et [GitHub](docs/integrations/github.md). Les autorisations externes nécessitent une configuration fournisseur ; leur présence dans le catalogue ne prouve pas une validation de bout en bout. Le catalogue machine est disponible publiquement sur `/about.json`, avec l’IP du client, l’heure Unix et les paramètres de type `integer` ou `string`. Le groupe `local` y identifie les outils locaux et la démonstration, sans constituer un service externe.
 
 ## Architecture
+
+L’organisation des sources et les responsabilités des modules sont décrites dans [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ```mermaid
 flowchart LR
