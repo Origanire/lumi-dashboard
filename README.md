@@ -64,6 +64,8 @@ Voir le [contrat API des comptes](docs/api/accounts.md) pour le modèle relation
 
 ## Lancement
 
+`npm run dev` démarre automatiquement PostgreSQL et Mailpit via Docker Compose, attend leur disponibilité, puis lance le backend et Vite. Docker doit être démarré.
+
 ### Développement
 
 Depuis la racine :
