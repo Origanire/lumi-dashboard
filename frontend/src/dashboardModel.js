@@ -21,13 +21,14 @@ export function cleanWidgets(widgets) {
     for (const [key, min, max] of [['refreshInterval',5,3600], ['duration',5,120], ['gmailLimit',1,20], ['githubLimit',1,20], ['limit',1,10]]) {
       if (widget[key] !== undefined && (!Number.isInteger(widget[key]) || widget[key] < min || widget[key] > max)) throw new Error(`Valeur invalide : ${key} (${min}–${max}).`);
     }
+    if (widget.type === 'weather' && widget.city !== undefined && (typeof widget.city !== 'string' || widget.city.trim().length < 2 || widget.city.length > 80)) throw new Error('Ville attendue : 2–80 caractères.');
     if (widget.timeRange !== undefined && !['short_term','medium_term','long_term'].includes(widget.timeRange)) throw new Error('Période Spotify invalide.');
     for (const key of ['content','city','temperature','condition','githubRepo','gmailClientId','gmailAccount','clientId']) {
       if (widget[key] !== undefined && typeof widget[key] !== 'string') throw new Error(`Texte attendu : ${key}.`);
     }
     if (widget.type.startsWith('github_') && (typeof widget.githubRepo !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9-]*\/[a-zA-Z0-9_.-]+$/.test(widget.githubRepo) || widget.githubRepo.endsWith('/..'))) throw new Error('Dépôt GitHub invalide.');
     if (widget.refreshInterval !== undefined) {
-      const min = widget.type.startsWith('github_') ? 300 : widget.type === 'spotify_player' ? 5 : 30;
+      const min = (widget.type.startsWith('github_') || widget.type === 'weather') ? 300 : widget.type === 'spotify_player' ? 5 : 30;
       const max = widget.type === 'spotify_player' ? 120 : 3600;
       if (widget.refreshInterval < min || widget.refreshInterval > max) throw new Error(`Rafraîchissement attendu : ${min}–${max} secondes.`);
     }

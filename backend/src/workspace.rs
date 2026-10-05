@@ -89,6 +89,14 @@ fn validate(input: &DashboardInput) -> Result<(), ApiError> {
                 return Err(ApiError::invalid("Paramètre texte invalide."));
             }
         }
+        if kind == "weather"
+            && obj.get("city").is_some_and(|v| {
+                !v.as_str()
+                    .is_some_and(|s| s.trim().chars().count() >= 2 && s.chars().count() <= 80)
+            })
+        {
+            return Err(ApiError::invalid("Ville invalide (2 à 80 caractères)."));
+        }
         if kind.starts_with("github_") {
             let repo = widget["githubRepo"].as_str().unwrap_or("");
             let parts: Vec<_> = repo.split('/').collect();
@@ -106,7 +114,7 @@ fn validate(input: &DashboardInput) -> Result<(), ApiError> {
             }
         }
         if let Some(seconds) = obj.get("refreshInterval").and_then(|v| v.as_u64()) {
-            let min = if kind.starts_with("github_") {
+            let min = if kind.starts_with("github_") || kind == "weather" {
                 300
             } else if kind == "spotify_player" {
                 5

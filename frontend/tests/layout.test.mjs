@@ -28,3 +28,15 @@ test('duplicate detection ignores geometry but preserves differences in widget s
   assert.notEqual(widgetConfigKey(widget), widgetConfigKey({ ...widget, content: 'Different' }));
   assert.deepEqual(resolveLayout([], null), []);
 });
+
+
+test('duplicate comparison ignores text case and surrounding spaces without altering widgets', () => {
+  const note = { type: 'notes', title: 'Mes Notes', content: 'Bonjour' };
+  assert.equal(widgetConfigKey(note), widgetConfigKey({ ...note, title: ' MES NOTES ', content: ' bonjour ', refreshInterval: 60 }));
+  assert.deepEqual(note, { type: 'notes', title: 'Mes Notes', content: 'Bonjour' });
+  const weather = { type: 'weather', title: 'Météo', city: 'Paris, France' };
+  assert.equal(widgetConfigKey(weather), widgetConfigKey({ ...weather, title: 'MÉTÉO', city: 'PARIS, FRANCE', refreshInterval: 900 }));
+  assert.notEqual(widgetConfigKey(weather), widgetConfigKey({ ...weather, city: 'Lyon, France' }));
+  const spotify = { type: 'spotify_player', title: 'Musique', clientId: 'AbC' };
+  assert.notEqual(widgetConfigKey(spotify), widgetConfigKey({ ...spotify, clientId: 'abc' }));
+});

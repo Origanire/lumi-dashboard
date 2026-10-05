@@ -73,6 +73,8 @@ test('save conflicts preserve local edits and provide recovery',async ({page}) =
   await expect(page.getByText('Enregistré dans votre compte',{exact:true})).toBeVisible();
 });
 test('GitHub outage is explicit and loading recovers without losing configuration',async ({page}) => {
+  // Mock before restoring existing widgets so real requests cannot exhaust the shared quota.
+  await page.route('https://api.github.com/**',route=>route.fulfill({status:503,body:'Unavailable'}));
   await login(page);
   await page.getByRole('button',{name:'Mon compte',exact:false}).click();
   const activate=page.getByRole('button',{name:'Activer GitHub',exact:true});if(await activate.count()) await activate.click();
@@ -82,7 +84,6 @@ test('GitHub outage is explicit and loading recovers without losing configuratio
   await page.getByLabel('Nom',{exact:true}).fill(`E2E panne ${Date.now()}`);
   await page.getByRole('button',{name:'Enregistrer',exact:true}).click();
   await expect(page.getByText('Enregistré dans votre compte',{exact:true})).toBeVisible();
-  await page.route('https://api.github.com/**',route=>route.fulfill({status:503,body:'Unavailable'}));
   await page.getByRole('button',{name:'Ajouter un widget',exact:false}).first().click();
   await page.getByRole('button',{name:/GitHub · Push/}).click();
   await page.getByLabel('Nom du widget').fill(`GitHub test ${Date.now()}`);

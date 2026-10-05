@@ -141,6 +141,7 @@ pub fn app_with_mailer(pool: PgPool, mailer: mail::Mailer) -> Router {
         .route("/api/auth/password/reset", post(email_auth::reset_password))
         .merge(SwaggerUi::new("/api/docs").url("/api/openapi.json", ApiDoc::openapi()))
         .fallback(not_found)
+        .layer(axum::extract::DefaultBodyLimit::max(1024 * 1024))
         .layer(axum::middleware::from_fn(middleware::request_context))
         .with_state(AppState { pool, mailer })
 }

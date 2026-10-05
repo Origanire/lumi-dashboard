@@ -103,7 +103,7 @@ export const WIDGET_CONFIG_KEYS = {
   github_graph: ['type', 'title', 'githubRepo'],
   gmail_unread: ['type', 'title', 'gmailClientId', 'gmailLimit'],
   gmail_compose: ['type', 'title', 'gmailAccount', 'gmailClientId'],
-  weather: ['type', 'title', 'city'],
+  weather: ['type', 'title', 'city', 'refreshInterval'],
   agenda: ['type', 'title'],
   calendar_week: ['type', 'title'],
   focus: ['type', 'title', 'duration'],

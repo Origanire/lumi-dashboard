@@ -169,9 +169,9 @@ Tous les widgets possèdent un titre et une taille configurables.
 | Google Calendar | Planning semaine/jour | Titre, intervalle 30–3600 s | Agenda principal connecté |
 | Local | Notes | Contenu | Sauvegardé dans le compte avec le dashboard |
 | Local | Focus | Durée 5–120 minutes | Minuteur local |
-| Démonstration | Météo | Ville | Données fictives, aucun service météo connecté |
+| Open-Meteo | Météo | Ville, intervalle | Conditions actuelles, sans compte fournisseur ; [guide](docs/integrations/weather.md) |
 
-Voir les guides [Calendar](docs/integrations/google-calendar.md) , [Gmail](docs/integrations/gmail.md) et [GitHub](docs/integrations/github.md). Les autorisations externes nécessitent une configuration fournisseur ; leur présence dans le catalogue ne prouve pas une validation de bout en bout. Le catalogue machine est disponible publiquement sur `/about.json`, avec l’IP du client, l’heure Unix et les paramètres de type `integer` ou `string`. Le groupe `local` y identifie les outils locaux et la démonstration, sans constituer un service externe.
+Voir les guides [Calendar](docs/integrations/google-calendar.md) , [Gmail](docs/integrations/gmail.md) et [GitHub](docs/integrations/github.md). Les autorisations externes nécessitent une configuration fournisseur ; leur présence dans le catalogue ne prouve pas une validation de bout en bout. Le catalogue machine est disponible publiquement sur `/about.json`, avec l’IP du client, l’heure Unix et les paramètres de type `integer` ou `string`. Le groupe `local` y identifie Notes et Focus ; le service `weather` identifie les conditions Open-Meteo.
 
 ## Architecture
 
@@ -228,7 +228,7 @@ npm run test:e2e -w frontend
 
 Créer la base une seule fois. `frontend/playwright.config.js` lance des serveurs dédiés sur les ports 3001 et 5174 : arrêter les serveurs de développement avant les tests. La base `lumi_e2e` reste distincte de `lumi`. Les parcours vérifient l’édition, le rechargement, l’import/export, les instances, les abonnements, les conflits, une panne GitHub et le viewport mobile. La démonstration vidéo est exclue par défaut et s’exécute avec `DEMO_RECORD=1 npm run test:e2e -w frontend -- --grep @demo`.
 
-Les tests de services unitaires utilisent des réponses simulées. Ils ne remplacent pas les essais OAuth réels ni un audit de sécurité. Voir [la recette fournisseur](docs/RECETTE.md), [le script de soutenance](docs/PRESENTATION.md) et [le périmètre des bonus](docs/BONUS.md).
+Les tests de services unitaires utilisent des réponses simulées. Ils ne remplacent pas les essais OAuth réels ni un audit de sécurité. Voir [la recette fournisseur](docs/RECETTE.md), [le script de soutenance](docs/PRESENTATION.md) et [le périmètre des bonus](BONUS.md).
 
 La connexion Spotify s’ouvre dans une fenêtre dédiée : le dashboard reste ouvert et conserve les connexions Gmail, Calendar et GitHub en mémoire. Autoriser les fenêtres contextuelles pour Lumi. Un rechargement manuel de la page efface toujours les jetons externes.
 
@@ -239,3 +239,12 @@ Renseigner `OPENAI_API_KEY` dans le `.env` racine, puis redémarrer `npm run dev
 Activer **OpenAI / ChatGPT** dans **Mon compte → Mes services**, puis ajouter **ChatGPT · Demander à l’IA**. Saisir un texte et cliquer sur Envoyer. Chaque demande est indépendante ; aucun envoi automatique, historique de conversation ou accès aux autres widgets. Le texte est transmis à OpenAI uniquement lors de l’envoi. Le résultat reste en mémoire dans le widget, avec effacement manuel possible.
 
 Le service utilise l’[API Responses](https://developers.openai.com/api/docs/guides/migrate-to-responses) avec `store: false`, une réponse limitée à 1 500 tokens et cinq demandes par minute par utilisateur. Une clé API OpenAI valide et un compte API disposant d’un quota sont nécessaires. Les éventuelles erreurs de quota ou configuration s’affichent dans le widget.
+
+
+## Corrections après soutenance
+
+Le [bilan des modifications](docs/REMEDIATION_SOUTENANCE.md) relie les corrections à chaque critère du jury : météo réelle, responsive, accessibilité, contrat public et protection du serveur. Les [comparaisons Front/Back/BDD](docs/CHOIX_TECHNOLOGIQUES.md) présentent trois solutions par couche sur les mêmes critères, avec limites et alternatives.
+
+Le POC se lance avec `npm run services` puis `npm run poc` ; voir [son protocole](poc/README.md). Les [résultats de vérification](docs/VALIDATION_REMEDIATION.md) distinguent les tests automatisés et les essais fournisseurs.
+
+**Accessibilité** ouvre les réglages de texte agrandi et de contraste. **Mon compte → Vos données** précise le stockage PostgreSQL, les préférences locales et les transferts vers les fournisseurs. Nginx limite les API par IP et les corps JSON à 1 Mio ; ces protections complètent les contrôles existants et concernent l’accès via le proxy Docker.

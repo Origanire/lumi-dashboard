@@ -7,6 +7,7 @@ import api from './api';
 import { SESSION_TOKEN_KEY } from './config';
 
 import Brand from './components/Brand';
+import AccessibilitySettings from './components/AccessibilitySettings';
 import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';
 
@@ -89,6 +90,7 @@ export default function App() {
     );
   return (
     <>
+      <AccessibilitySettings />
       <a href="#main" className="skip-link">
         Aller au contenu
       </a>

@@ -8,8 +8,7 @@ export const INITIAL_WIDGETS = [
     width: 6,
     height: 2,
     city: 'Paris',
-    temperature: '18°',
-    condition: 'Éclaircies',
+    refreshInterval: 900,
   },
   {
     id: 2,

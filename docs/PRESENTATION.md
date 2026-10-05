@@ -6,7 +6,7 @@ Milo Bousquet et Nathan Muzay ont travaillé ensemble sur la conception, le fron
 
 « Lumi réunit des informations et des outils dans plusieurs dashboards personnalisables. Chaque utilisateur choisit ses services, configure ses widgets et retrouve ses dashboards après reconnexion. »
 
-L’équipe compte deux personnes. Le seuil du sujet est de trois services et six widgets. Le catalogue implémente quatre intégrations externes et huit widgets externes, auxquels s’ajoutent Notes, Focus et une météo explicitement présentée comme démonstration.
+L’équipe compte deux personnes. Le seuil du sujet est de trois services et six widgets. Le catalogue contient douze types de widgets, dont une météo Open-Meteo réelle sans compte fournisseur. Notes et Focus sont locaux ; les données privées des autres fournisseurs nécessitent un consentement.
 
 ## 2. Le parcours utilisateur — 2 minutes
 
@@ -43,7 +43,7 @@ Montrer les commandes `npm test`, `npm run test:e2e -w frontend`, `docker compos
 
 Présenter les tests d’isolation des comptes, de conflits, de permissions administrateur, des jetons OIDC et de formats importés. Montrer le rendu mobile et les commandes de déplacement au toucher.
 
-Limites assumées : la météo est fictive ; les jetons externes demandent une reconnexion après rechargement ; le graphe GitHub est un aperçu borné ; les notifications et observations GitHub sont limitées à la session ; la mise à jour entre appareils se fait au rechargement.
+Limites assumées : la météo dépend d’Open-Meteo et du résultat de recherche de ville ; les jetons externes demandent une reconnexion après rechargement ; le graphe GitHub est un aperçu borné ; les notifications et observations GitHub sont limitées à la session ; la mise à jour entre appareils se fait au rechargement.
 
 ## Répartition orale proposée
 
@@ -57,3 +57,7 @@ Cette répartition sert uniquement à la prise de parole ; les deux membres ont 
 - Préparer les comptes, e-mails de test, événements et lecture Spotify.
 - Ouvrir l’application, Mailpit, `/about.json` et Swagger avant de commencer.
 - Tester la vidéo et couper les notifications personnelles du poste.
+
+## Complément après soutenance
+
+Présenter le [bilan](REMEDIATION_SOUTENANCE.md), les [trois comparaisons par couche](CHOIX_TECHNOLOGIQUES.md) et le [POC](../poc/README.md). Démontrer deux météos, la panne explicite, les réglages d’accessibilité et la conservation PostgreSQL. Distinguer les essais simulés des consentements fournisseurs réels.

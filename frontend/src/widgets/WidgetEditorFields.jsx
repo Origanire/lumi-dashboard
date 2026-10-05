@@ -5,7 +5,6 @@ export default function WidgetEditorFields({ draft, update }) {
     'openai_chat',
     'notes',
     'focus',
-    'weather',
     'gmail_compose',
     'spotify_player',
   ].includes(draft.type);
@@ -17,12 +16,12 @@ export default function WidgetEditorFields({ draft, update }) {
           <input
             id="widget-refresh"
             type="number"
-            min={draft.type.startsWith('github_') ? 300 : 30}
+            min={draft.type.startsWith('github_') || draft.type === 'weather' ? 300 : 30}
             max="3600"
             required
             value={
               draft.refreshInterval ??
-              (draft.type.startsWith('github_') ? 300 : 60)
+              (draft.type === 'weather' ? 900 : draft.type.startsWith('github_') ? 300 : 60)
             }
             onChange={(event) =>
               update('refreshInterval', Number(event.target.value))
@@ -134,14 +133,16 @@ function SpecificEditorFields({ draft, update }) {
     return (
       <>
         <p className="field-hint">
-          Aperçu avec des données d’exemple, sans connexion à un service météo.
+          Conditions actuelles Open-Meteo, sans compte fournisseur. Précisez le pays en cas d’homonyme (Paris, France).
         </p>
         <label htmlFor="widget-city">Ville</label>
         <input
           id="widget-city"
           value={draft.city || ''}
           onChange={(event) => update('city', event.target.value)}
-          maxLength="24"
+          maxLength="80"
+          minLength="2"
+          required
         />
       </>
     );

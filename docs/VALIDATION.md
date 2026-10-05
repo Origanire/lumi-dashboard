@@ -26,3 +26,7 @@ La stack habituelle conserve le port attendu 8080. `.env` et les dépendances lo
 ## Limites de la validation
 
 Les tests navigateur ne constituent pas un audit exhaustif d’accessibilité. Les tests cryptographiques ne prouvent pas que le client Google est correctement configuré chez le fournisseur. Les essais réels Gmail/Calendar/Spotify et GitHub privé doivent être consignés par l’équipe avec ses comptes de test. Aucune validation réelle n’est déduite des données simulées.
+
+## Vérifications après soutenance
+
+Les résultats actuels et leurs limites sont détaillés dans [VALIDATION_REMEDIATION.md](VALIDATION_REMEDIATION.md). Ce complément actualise les comptes de tests et ajoute le POC, la météo réelle, les essais mobile et les protections Nginx.

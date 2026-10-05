@@ -27,7 +27,7 @@ async fn public_catalog_has_client_time_and_typed_parameters() {
     assert_eq!(value["client"]["host"], "192.0.2.42");
     assert!(value["server"]["current_time"].as_u64().unwrap() > 1_700_000_000);
     let services = value["server"]["services"].as_array().unwrap();
-    assert_eq!(services.len(), 6);
+    assert_eq!(services.len(), 7);
     let mut count = 0;
     for service in services {
         for widget in service["widgets"].as_array().unwrap() {
@@ -74,4 +74,42 @@ fn catalog_matches_frontend_widget_types() {
     frontend.sort();
     backend.sort();
     assert_eq!(frontend, backend);
+}
+
+#[tokio::test]
+async fn oversized_json_is_rejected_before_database_work() {
+    let pool = PgPoolOptions::new()
+        .connect_lazy("postgres://unused:unused@localhost/unused")
+        .unwrap();
+    let request = Request::builder()
+        .method("POST")
+        .uri("/api/auth/register")
+        .header("content-type", "application/json")
+        .body(Body::from(format!(
+            "{{\"name\":\"{}\"}}",
+            "x".repeat(1024 * 1024)
+        )))
+        .unwrap();
+    let response = lumi_backend::app(pool).oneshot(request).await.unwrap();
+    assert_eq!(response.status(), 413);
+    assert_eq!(response.headers()["cache-control"], "no-store");
+}
+
+#[test]
+fn weather_catalog_declares_live_provider_and_configurable_timer() {
+    let services = lumi_backend::about::catalog();
+    let service = services.as_array().unwrap().iter().find(|s| s["name"] == "weather").unwrap();
+    let widget = &service["widgets"][0];
+    assert!(widget["description"].as_str().unwrap().contains("Open-Meteo"));
+    assert!(widget["params"].as_array().unwrap().iter().any(|p| p["name"] == "city" && p["type"] == "string"));
+    assert!(widget["params"].as_array().unwrap().iter().any(|p| p["name"] == "refreshInterval" && p["type"] == "integer"));
+    for service in services.as_array().unwrap() {
+        assert!(!service["name"].as_str().unwrap().is_empty());
+        for widget in service["widgets"].as_array().unwrap() {
+            let mut names = std::collections::HashSet::new();
+            for param in widget["params"].as_array().unwrap() {
+                assert!(names.insert(param["name"].as_str().unwrap()));
+            }
+        }
+    }
 }

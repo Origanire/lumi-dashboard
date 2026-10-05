@@ -72,6 +72,7 @@ export default function WidgetEditor({ widget, mode, onClose, onSave }) {
       title: meta?.label || current.title,
       width: meta?.defaultWidth || current.width || 6,
       height: meta?.defaultHeight || current.height || 1,
+      refreshInterval: newType === 'weather' ? 900 : newType.startsWith('github_') ? 300 : newType === 'spotify_player' ? 10 : 60,
     }));
     setError('');
   };
@@ -106,7 +107,7 @@ export default function WidgetEditor({ widget, mode, onClose, onSave }) {
     }
     const saved = onSave(validated);
     if (!saved)
-      setError('Un widget avec exactement ces paramètres existe déjà.');
+      setError('Un widget avec les mêmes paramètres existe déjà (majuscules et minuscules ignorées pour les textes).');
   }
 
   return (

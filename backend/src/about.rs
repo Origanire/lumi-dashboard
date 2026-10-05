@@ -31,7 +31,6 @@ fn widget(name: &str, description: &str, params: &[(&str, &str)]) -> Value {
         "openai_chat",
         "notes",
         "focus",
-        "weather",
         "gmail_compose",
         "spotify_player",
     ]
@@ -66,10 +65,10 @@ pub fn catalog() -> Value {
             widget("agenda", "Échéances du mois", &[]),
             widget("calendar_week", "Planning semaine et jour", &[])
         ]},
+        {"name": "weather", "widgets": [widget("weather", "Conditions actuelles Open-Meteo", &[("city", "string")])]},
         {"name": "local", "widgets": [
-            widget("notes", "Notes locales", &[("content", "string")]),
-            widget("focus", "Minuteur local", &[("duration", "integer")]),
-            widget("weather", "Démonstration météo avec données fictives", &[("city", "string")])
+            widget("notes", "Notes personnelles persistées", &[("content", "string")]),
+            widget("focus", "Minuteur local", &[("duration", "integer")])
         ]}
     ])
 }
