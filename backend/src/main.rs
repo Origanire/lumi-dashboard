@@ -3,7 +3,16 @@ use tokio::net::TcpListener;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    dotenvy::dotenv().ok();
+    match dotenvy::dotenv() {
+        Ok(_) => {}
+        Err(dotenvy::Error::Io(error)) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(_) => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "Configuration .env invalide : vérifiez la syntaxe et placez les valeurs contenant des espaces entre guillemets.",
+            ).into());
+        }
+    }
     let url =
         std::env::var("DATABASE_URL").expect("DATABASE_URL doit être configurée (PostgreSQL)");
     let pool = PgPoolOptions::new()
