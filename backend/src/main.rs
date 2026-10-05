@@ -30,9 +30,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         lumi_backend::auth::seed_demo(&pool, &email, &hash).await?;
     }
     let address = std::env::var("BIND_ADDRESS").unwrap_or_else(|_| "127.0.0.1:3001".into());
+    let mailer = lumi_backend::mail::Mailer::from_env()?;
     let listener = TcpListener::bind(&address).await?;
     println!("Backend Rust disponible sur http://{address}");
-    let mailer = lumi_backend::mail::Mailer::from_env()?;
     axum::serve(
         listener,
         lumi_backend::app_with_mailer(pool, mailer)

@@ -42,3 +42,10 @@ Les consentements OAuth réels, les mails reçus par une boîte externe, l’app
 ## Complément sur les doublons
 
 Après la correction de la comparaison des textes, les tests frontend et le build de production passent. Le parcours navigateur dédié passe : doublons insensibles à la casse bloqués à la création/modification et édition du widget lui-même autorisée. Il a été exécuté avec un serveur frontend isolé sur 5185 et des API simulées, car le port backend habituel était occupé.
+
+
+## Complément sur OpenAI
+
+Le lecteur dotenvy a confirmé qu’une ligne `MAIL_FROM` mal formée interrompait le chargement avant `OPENAI_API_KEY`. Après correction, le fichier se charge entièrement et la clé est présente, sans affichage de sa valeur. Les identifiants SMTP ont été conservés commentés pour le mode Mailpit local, puis les serveurs de développement ont été relancés.
+
+Les tests dédiés vérifient la syntaxe du modèle `.env.example`, le refus d’un fichier mal formé sans fuite de valeurs et la distinction entre crédit épuisé, limites de dépenses et limitation temporaire. L’appel OpenAI de diagnostic réel a reçu HTTP 429 / `credit_balance_exhausted` ; aucune réponse générée n’est donc déclarée validée et aucun crédit n’a été acheté.

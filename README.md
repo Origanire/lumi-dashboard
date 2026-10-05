@@ -248,3 +248,12 @@ Le [bilan des modifications](docs/REMEDIATION_SOUTENANCE.md) relie les correctio
 Le POC se lance avec `npm run services` puis `npm run poc` ; voir [son protocole](poc/README.md). Les [résultats de vérification](docs/VALIDATION_REMEDIATION.md) distinguent les tests automatisés et les essais fournisseurs.
 
 **Accessibilité** ouvre les réglages de texte agrandi et de contraste. **Mon compte → Vos données** précise le stockage PostgreSQL, les préférences locales et les transferts vers les fournisseurs. Nginx limite les API par IP et les corps JSON à 1 Mio ; ces protections complètent les contrôles existants et concernent l’accès via le proxy Docker.
+
+
+### Diagnostic du widget OpenAI
+
+Une valeur `.env` contenant des espaces doit être entre guillemets, par exemple `MAIL_FROM="Lumi <noreply@lumi.local>"`. Une erreur avant `OPENAI_API_KEY` empêchait auparavant son chargement ; le serveur refuse désormais de démarrer avec un `.env` mal formé et affiche un diagnostic sans divulguer les valeurs. Redémarrer `npm run dev` après modification et recharger le dashboard.
+
+Pour Mailpit (`SMTP_SECURITY=local`), laisser `SMTP_USERNAME` et `SMTP_PASSWORD` vides ou commentés. Pour un SMTP réel, utiliser TLS/STARTTLS et une configuration cohérente.
+
+Le message « crédit API épuisé » correspond au code fournisseur `credit_balance_exhausted`. Il faut réapprovisionner le compte API ; redémarrer ou multiplier les demandes ne corrige pas ce cas. Les limites temporaires de requêtes sont signalées séparément. Voir les [codes d’erreur officiels OpenAI](https://developers.openai.com/api/docs/guides/error-codes).

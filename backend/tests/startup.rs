@@ -18,3 +18,10 @@ fn malformed_env_stops_startup_without_logging_values() {
     assert!(!stderr.contains("test-secret-never-log"));
     assert!(!stderr.contains("DATABASE_URL"));
 }
+
+#[test]
+fn provided_env_template_has_valid_syntax() {
+    for item in dotenvy::from_read_iter(&include_bytes!("../../.env.example")[..]) {
+        assert!(item.is_ok(), "Le modèle .env.example doit être lisible par dotenvy.");
+    }
+}

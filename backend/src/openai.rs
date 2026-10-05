@@ -20,6 +20,16 @@ fn key() -> Option<String> {
 pub async fn status(_user: AuthUser) -> Json<Value> {
     Json(json!({"configured":key().is_some()}))
 }
+fn quota_error(data: &Value) -> ApiError {
+    let message = match data["error"]["code"].as_str() {
+        Some("credit_balance_exhausted") => "Le crédit du compte API OpenAI est épuisé. Ajoutez des crédits dans la facturation OpenAI avant de réessayer.",
+        Some("organization_spend_limit_exceeded" | "project_spend_limit_exceeded" | "organization_usage_limit_exceeded") => "La limite de dépense ou d’utilisation du compte API OpenAI est atteinte. Vérifiez les limites du compte avant de réessayer.",
+        Some("rate_limit_exceeded" | "slow_down") => "Trop de demandes à OpenAI. Patientez avant de réessayer.",
+        _ => "Quota ou crédit OpenAI insuffisant. Vérifiez le compte API ou réessayez plus tard.",
+    };
+    ApiError(StatusCode::TOO_MANY_REQUESTS, message)
+}
+
 fn extract_answer(data: &Value) -> Result<Answer, ApiError> {
     let text = data["output"]
         .as_array()
@@ -97,10 +107,7 @@ pub async fn ask(
                 StatusCode::BAD_GATEWAY,
                 "Clé OpenAI invalide ou accès au modèle refusé. Vérifiez la configuration serveur.",
             ),
-            429 => ApiError(
-                StatusCode::TOO_MANY_REQUESTS,
-                "Quota ou crédit OpenAI insuffisant. Vérifiez le compte API ou réessayez plus tard.",
-            ),
+            429 => quota_error(&response.json::<Value>().await.unwrap_or(Value::Null)),
             400 | 404 => ApiError(
                 StatusCode::BAD_GATEWAY,
                 "Modèle OpenAI indisponible ou configuration incompatible. Vérifiez OPENAI_MODEL.",
@@ -120,6 +127,19 @@ pub async fn ask(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn billing_and_temporary_rate_errors_have_distinct_safe_messages() {
+        let depleted = quota_error(&json!({"error":{"code":"credit_balance_exhausted","message":"secret-provider-details"}}));
+        assert_eq!(depleted.0, StatusCode::TOO_MANY_REQUESTS);
+        assert!(depleted.1.contains("crédit"));
+        assert!(!depleted.1.contains("secret-provider-details"));
+        let rate = quota_error(&json!({"error":{"code":"rate_limit_exceeded"}}));
+        assert!(rate.1.contains("Patientez"));
+        let limit = quota_error(&json!({"error":{"code":"project_spend_limit_exceeded"}}));
+        assert!(limit.1.contains("limite"));
+        assert!(quota_error(&Value::Null).1.contains("Quota ou crédit"));
+    }
+
     #[test]
     fn extracts_text_and_refusals_without_reasoning_or_metadata() {
         let data = json!({"status":"completed","output":[{"type":"reasoning","content":[{"type":"output_text","text":"private"}]},{"type":"message","content":[{"type":"output_text","text":"Bonjour"},{"type":"refusal","refusal":"Refus"}]}]});

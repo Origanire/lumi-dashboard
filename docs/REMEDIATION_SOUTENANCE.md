@@ -133,3 +133,10 @@ Les essais OAuth avec des comptes réels, la consommation réelle de l’API Ope
 La création et la modification comparent désormais les textes sans tenir compte de la casse ni des espaces au début/à la fin : titre, contenu des notes, ville, dépôt GitHub et adresse Gmail. La casse saisie reste conservée pour l’affichage. Les identifiants clients OAuth restent sensibles à la casse. La vérification exclut le widget en cours de modification et distingue toujours les configurations réellement différentes (par exemple deux villes). Les intervalles sans effet sur les widgets locaux ne créent plus une différence artificielle ; les valeurs de rafraîchissement implicites sont comparées à leur défaut effectif.
 
 Preuves : `frontend/tests/layout.test.mjs` et `frontend/e2e/widget-duplicates.spec.js` vérifient le refus d’un doublon à la création et à la modification, ainsi que l’édition valide du widget lui-même.
+
+
+## Complément : diagnostic OpenAI et configuration
+
+Une valeur `MAIL_FROM` non entourée de guillemets interrompait la lecture du `.env` avant la clé OpenAI. Le fichier local a été corrigé, le doublon supprimé et les identifiants SMTP réels conservés commentés pour le mode Mailpit. Le modèle `.env.example` a également été corrigé. Le démarrage échoue désormais explicitement sur une syntaxe invalide, sans afficher les valeurs du fichier.
+
+Un appel de diagnostic réel a atteint OpenAI mais a reçu HTTP 429 avec `credit_balance_exhausted`. La configuration est lisible ; les réponses restent bloquées par le crédit du compte API. Le serveur distingue maintenant le crédit épuisé, les limites de dépenses et les limites temporaires de requêtes avec des messages sûrs. Aucun réapprovisionnement du compte n’a été effectué.
