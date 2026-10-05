@@ -1,7 +1,7 @@
 export const WIDGET_TYPES = {
   openai_chat: {
-    label: 'ChatGPT · Demander à l’IA',
-    eyebrow: 'OpenAI',
+    label: 'Assistant IA local · Poser une question',
+    eyebrow: 'Ollama',
     icon: '✦',
     color: 'mint',
     defaultWidth: 6,

@@ -46,3 +46,11 @@ Les prérequis des tests navigateur sont dans le [README](../README.md#tests-nav
 - `poc/` contient une configuration partagée entre Front et Back, son test frontend et le protocole ; `scripts/poc.mjs` exécute `npm run poc`.
 - [CHOIX_TECHNOLOGIQUES.md](CHOIX_TECHNOLOGIQUES.md) compare trois solutions par couche ; [REMEDIATION_SOUTENANCE.md](REMEDIATION_SOUTENANCE.md) explique les modifications, leur impact, les menaces, les limites et les alternatives.
 - `frontend/src/styles/accessibility.css` est chargé en dernier pour préserver la lisibilité mobile et les préférences de lecture.
+
+## Assistant IA local
+
+Le module historique `backend/src/openai.rs` appelle désormais l’API locale Ollama (`/api/tags` et `/api/chat`), sans clé ni appel OpenAI. Les routes `/api/ai/status` et `/api/ai/ask`, le type `openai_chat` et l’abonnement `openai` restent compatibles avec les dashboards existants. Le catalogue public annonce le fournisseur `ollama`.
+
+`ollama-init` télécharge `qwen2.5:14b` avant le démarrage Docker du backend. Les modèles sont persistés dans `ollama_data`. Le backend valide la session, l’abonnement, la longueur et le quota (cinq demandes/minute), puis autorise une seule génération à la fois pour borner l’usage CPU/RAM. L’interface attend un envoi explicite et permet de revérifier la disponibilité du modèle. Le proxy autorise un délai de 305 secondes uniquement pour cet envoi. Voir [ASSISTANT_LOCAL.md](ASSISTANT_LOCAL.md).
+
+Les demandes arithmétiques utilisent `backend/src/calculator.rs` : analyse bornée des expressions, calcul décimal et gestion des erreurs. Une expression explicite est évaluée directement ; une phrase est traduite en JSON contraint par Ollama, vérifiée pour conserver les nombres, puis évaluée localement. La réponse numérique est produite par Rust. Les autres questions utilisent Qwen2.5 14B avec une température de 0,1 et des consignes explicites sur les informations non vérifiables en direct.

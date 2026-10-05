@@ -4,7 +4,7 @@
   "private": true,
   "workspaces": ["frontend"],
   "scripts": {
-    "services": "docker compose up -d --wait postgres mailpit",
+    "services": "docker compose up -d --wait postgres mailpit ollama && docker compose run --rm ollama-init",
     "predev": "npm run services",
     "dev": "concurrently --kill-others -n backend,frontend \"cargo run --manifest-path backend/Cargo.toml\" \"npm run dev -w frontend\"",
     "build": "npm run build -w frontend && cargo build --release --manifest-path backend/Cargo.toml",

@@ -48,7 +48,7 @@ fn widget(name: &str, description: &str, params: &[(&str, &str)]) -> Value {
 
 pub fn catalog() -> Value {
     json!([
-        {"name":"openai", "widgets":[widget("openai_chat", "Demande à OpenAI", &[])]},
+        {"name":"ollama", "widgets":[widget("openai_chat", "Question au modèle local Ollama", &[])]},
         {"name": "github", "widgets": [
             widget("github_pushes", "Push récents du dépôt", &[("githubRepo", "string"), ("githubLimit", "integer")]),
             widget("github_graph", "Graphe des commits", &[("githubRepo", "string")])

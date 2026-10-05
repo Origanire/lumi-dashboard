@@ -252,6 +252,18 @@ async fn openai_subscription_and_prompt_validation(pool: PgPool) {
         401
     );
     let (token, user) = account(&pool, &app, "ai@test.local").await;
+    assert_eq!(
+        request(
+            &app,
+            "POST",
+            "/api/ai/ask",
+            &token,
+            json!({"prompt":"Bonjour"})
+        )
+        .await
+        .0,
+        403
+    );
     sqlx::query("INSERT INTO service_subscriptions(user_id,service) VALUES($1,'openai')")
         .bind(uuid::Uuid::parse_str(&user).unwrap())
         .execute(&pool)
@@ -302,5 +314,95 @@ async fn poc_stack_persists_two_weather_widgets(pool: PgPool) {
     assert_eq!(
         request(&app, "DELETE", &path, &token, Value::Null).await.0,
         204
+    );
+}
+
+#[sqlx::test]
+async fn local_ai_migration_preserves_custom_titles_and_widget_order(pool: PgPool) {
+    let app = lumi_backend::app(pool.clone());
+    let (_, user) = account(&pool, &app, "migration@test.local").await;
+    let widgets = json!([
+        {"id":"a","type":"openai_chat","title":"ChatGPT · Demander à l’IA"},
+        {"id":"b","type":"openai_chat","title":"Mon assistant"},
+        {"id":"c","type":"weather","title":"ChatGPT · Demander à l’IA"}
+    ]);
+    let id = uuid::Uuid::new_v4();
+    sqlx::query(
+        "INSERT INTO user_dashboards(id,user_id,name,widgets) VALUES($1,$2,'Migration',$3)",
+    )
+    .bind(id)
+    .bind(uuid::Uuid::parse_str(&user).unwrap())
+    .bind(widgets.clone())
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::raw_sql(include_str!(
+        "../migrations/202610050001_local_ai_title.sql"
+    ))
+    .execute(&pool)
+    .await
+    .unwrap();
+    let result: Value = sqlx::query_scalar("SELECT widgets FROM user_dashboards WHERE id=$1")
+        .bind(id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        result[0]["title"],
+        "Assistant IA local · Poser une question"
+    );
+    assert_eq!(result[0]["id"], "a");
+    assert_eq!(result[1], widgets[1]);
+    assert_eq!(result[2], widgets[2]);
+    let revision: i64 = sqlx::query_scalar("SELECT revision FROM user_dashboards WHERE id=$1")
+        .bind(id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(revision, 1);
+    sqlx::raw_sql(include_str!(
+        "../migrations/202610050001_local_ai_title.sql"
+    ))
+    .execute(&pool)
+    .await
+    .unwrap();
+    let revision: i64 = sqlx::query_scalar("SELECT revision FROM user_dashboards WHERE id=$1")
+        .bind(id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(revision, 1);
+}
+
+#[sqlx::test]
+async fn calculator_requires_subscription_and_preserves_request_quota(pool: PgPool) {
+    let app = lumi_backend::app(pool.clone());
+    let (token, _) = account(&pool, &app, "calculator@test.local").await;
+    let input = json!({"prompt":"12 * 3.1 * 2 - 31.4"});
+    assert_eq!(
+        request(&app, "POST", "/api/ai/ask", &token, input.clone())
+            .await
+            .0,
+        403
+    );
+    assert_eq!(
+        request(&app, "PUT", "/api/services/openai", &token, Value::Null)
+            .await
+            .0,
+        204
+    );
+    for _ in 0..5 {
+        let (status, answer) = request(&app, "POST", "/api/ai/ask", &token, input.clone()).await;
+        assert_eq!(status, 200);
+        assert!(
+            answer["text"]
+                .as_str()
+                .unwrap()
+                .ends_with("Résultat calculé : 43")
+        );
+    }
+    assert_eq!(
+        request(&app, "POST", "/api/ai/ask", &token, input).await.0,
+        429
     );
 }

@@ -1,0 +1,77 @@
+<div id="lumi-disk-cleanup">
+  <h3>Espace libre après nettoyage</h3>
+  <label class="form-check">
+    <input id="lumi-disk-simulation" type="checkbox" class="form-check-input">
+    <span class="form-check-label">Simuler les autres caches Docker : environ 7,65 Go</span>
+  </label>
+  <div id="lumi-disk-plot"></div>
+  <div id="lumi-disk-summary" class="tabular-nums" aria-live="polite"></div>
+  <div class="text-small text-muted">Projection estimée · caches Docker partagés avec d’autres projets</div>
+  <style>
+    #lumi-disk-cleanup { color: var(--foreground); }
+    #lumi-disk-plot { width: 100%; }
+    #lumi-disk-plot svg { width: 100%; display: block; }
+    #lumi-disk-plot svg text { fill: var(--foreground); font-size: 12px; font-weight: 400; }
+  </style>
+  <script>
+    (() => {
+      const root = document.getElementById('lumi-disk-cleanup');
+      const control = root.querySelector('#lumi-disk-simulation');
+      const plot = root.querySelector('#lumi-disk-plot');
+      const summary = root.querySelector('#lumi-disk-summary');
+      const before = 5.062148096;
+      const after = 10.694967296;
+      const cache = 7.651;
+      const fmt = value => value.toLocaleString('fr-FR', { maximumFractionDigits: 1 });
+      const svgNS = 'http://www.w3.org/2000/svg';
+      const make = (tag, attrs, text) => {
+        const element = document.createElementNS(svgNS, tag);
+        for (const [key, value] of Object.entries(attrs)) element.setAttribute(key, value);
+        if (text !== undefined) element.textContent = text;
+        return element;
+      };
+      function render() {
+        const width = Math.max(280, plot.getBoundingClientRect().width);
+        const rows = [['Avant', before], ['Après', after]];
+        if (control.checked) rows.push(['Projection', after + cache]);
+        const height = rows.length * 46 + 70;
+        const left = 82, right = 48, top = 12, bottom = height - 48;
+        const max = Math.max(...rows.map(row => row[1])) * 1.15;
+        const span = width - left - right;
+        const scale = value => left + value / max * span;
+        const svg = make('svg', { viewBox: `0 0 ${width} ${height}`, role: 'img', 'aria-label': 'Espace disponible avant et après nettoyage, en gigaoctets' });
+        svg.append(make('title', {}, 'Espace libre sur le disque'));
+        svg.append(make('desc', {}, rows.map(([name, value]) => `${name} : ${fmt(value)} Go`).join('. ')));
+        svg.append(make('rect', { 'data-chart-frame': '', x: left, y: top, width: span, height: bottom-top, fill: 'none', stroke: 'var(--border)', 'stroke-width': 1 }));
+        rows.forEach(([name, value], index) => {
+          const y = top + 10 + index * 46;
+          svg.append(make('text', { x: left - 8, y: y + 17, 'text-anchor': 'end' }, name));
+          svg.append(make('rect', { x: left, y, width: scale(value) - left, height: 26, fill: 'var(--viz-series-1)', opacity: index === 0 ? 0.5 : 1 }));
+          svg.append(make('text', { x: scale(value) + 5, y: y + 17 }, `${index === 2 ? '≈ ' : ''}${fmt(value)}`));
+        });
+        const tickCount = width < 420 ? 3 : 4;
+        for (let i = 0; i < tickCount; i++) {
+          const value = max * i / (tickCount - 1);
+          svg.append(make('text', { x: scale(value), y: bottom + 18, 'text-anchor': i === 0 ? 'start' : i === tickCount-1 ? 'end' : 'middle' }, fmt(value)));
+        }
+        svg.append(make('text', { 'class': 'axis-title', 'data-axis': 'x', x: left + span/2, y: height - 5, 'text-anchor': 'middle' }, 'Espace libre (Go)'));
+        svg.append(make('text', { 'class': 'axis-title', 'data-axis': 'y', x: 5, y: 11 }, 'Situation'));
+        plot.replaceChildren(svg);
+        summary.textContent = control.checked ? `Projection : ≈ ${fmt(after + cache)} Go libres` : `${fmt(after-before)} Go récupérés · ${fmt(after)} Go libres`;
+      }
+      function restore(state) {
+        control.checked = state?.modelContent?.includeDocker === true;
+        render();
+      }
+      control.addEventListener('change', () => {
+        render();
+        if (window.openai?.setWidgetState) window.openai.setWidgetState({ modelContent: { includeDocker: control.checked }, privateContent: null }).catch(() => {});
+      });
+      window.addEventListener('openai:set_globals', event => {
+        if (event.detail?.globals && 'widgetState' in event.detail.globals) restore(event.detail.globals.widgetState);
+      });
+      restore(window.openai?.widgetState);
+      new ResizeObserver(render).observe(plot);
+    })();
+  </script>
+</div>

@@ -17,7 +17,7 @@ Date : 5 octobre 2026. Document de suivi des remarques du jury et des modificati
 | API Security — 1/2 | Limite JSON 1 Mio ; Nginx limite les API et l’authentification par IP, délais bornés et version masquée | Test 413, configuration Nginx et tests existants d’autorisation |
 | User authentication — 3/3 | Connexion et vérification e-mail existantes conservées | Tests Rust auth/e-mail |
 | Third-party integration — 3/3 | Intégrations existantes conservées ; nouvelle intégration météo | Guide météo et recette fournisseurs |
-| Secrets management — 3/3 | Clé OpenAI côté serveur ; météo sans clé ; aucun secret ajouté à l’export | Tests de sessions et `.env.example` |
+| Secrets management — 3/3 | IA locale sans clé API ; météo sans clé ; aucun secret ajouté à l’export | Tests de sessions et `.env.example` |
 | Technology choices — 1/6 | Trois alternatives par couche sur cinq critères communs ; POC exécutable | [Comparaison](CHOIX_TECHNOLOGIQUES.md), `npm run poc` |
 | Technology documentation — 6/6 | Guides existants actualisés, nouvelles preuves reliées au code | README, architecture, guide météo, ce bilan |
 | Choice impact assessment — 2/4 | Stockage réel explicité, menaces et risques résiduels étudiés ; panneau « Vos données » | Sections suivantes, page Mon compte |
@@ -48,7 +48,7 @@ Les fonctions préexistantes restent utiles : lien d’évitement, commandes Mon
 
 Axum limite les corps JSON à 1 Mio au lieu du plafond implicite de 2 Mio. Le test envoie un corps dépassant cette taille à l’inscription et vérifie 413 avant accès PostgreSQL.
 
-Nginx limite les API à 10 requêtes/seconde/IP avec rafale de 30, et `/api/auth/` à 10 requêtes/minute/IP avec rafale de 10. Les rejets retournent 429. Les corps sont limités à 1 Mio, le délai de lecture du corps à 15 secondes, la connexion proxy à 5 secondes et la lecture proxy à 60 secondes. La version Nginx n’est plus publiée. Les en-têtes de sécurité ne sont plus émis en double par le proxy et l’API. Ces mécanismes complètent les limites existantes par adresse e-mail et par compte OpenAI. Paramètres fondés sur le [module officiel Nginx](https://nginx.org/en/docs/http/ngx_http_limit_req_module.html).
+Nginx limite les API à 10 requêtes/seconde/IP avec rafale de 30, et `/api/auth/` à 10 requêtes/minute/IP avec rafale de 10. Les rejets retournent 429. Les corps sont limités à 1 Mio, le délai de lecture du corps à 15 secondes, la connexion proxy à 5 secondes et la lecture proxy à 60 secondes. La version Nginx n’est plus publiée. Les en-têtes de sécurité ne sont plus émis en double par le proxy et l’API. Ces mécanismes complètent les limites existantes par adresse e-mail et par compte pour l’assistant IA. Paramètres fondés sur le [module officiel Nginx](https://nginx.org/en/docs/http/ngx_http_limit_req_module.html).
 
 Les limites par IP s’appliquent au chemin Docker/Nginx. En développement, l’accès direct Rust reste lié à 127.0.0.1. Une exposition publique du port backend contournerait les limites Nginx ; le backend n’est donc pas publié par Compose. Un NAT partagé peut produire des 429 légitimes : ajuster après observation, sans retirer la limite d’authentification.
 
@@ -82,7 +82,7 @@ Périmètre : navigateur, Nginx, API, PostgreSQL, SMTP, fournisseurs OAuth/IA/m�
 | Injection SQL / paramètres malveillants | Requêtes paramétrées, validation des widgets et types, champs inconnus refusés | Une future requête SQL construite par interpolation pourrait rouvrir le risque |
 | XSS et vol du jeton d’onglet | Échappement React, CSP, jetons externes en mémoire, absence de scripts arbitraires | `sessionStorage` reste lisible par JavaScript ; envisager cookie HttpOnly + protection CSRF ; auditer dépendances |
 | CSRF / OAuth détourné / rejeu | Bearer explicite ; PKCE Spotify ; nonce OIDC expirant à usage unique, vérification signature/audience/issuer | Une migration aux cookies demande une protection CSRF ; tester le vrai consentement fournisseur |
-| Corps énormes / saturation / coût IA | Nouveau plafond 1 Mio et quotas Nginx ; limites OpenAI existantes ; pool SQL borné ; timers | DDoS distribué, réponse fournisseur lente ; proxy public/WAF, budgets et supervision nécessaires |
+| Corps énormes / saturation / coût IA | Nouveau plafond 1 Mio et quotas Nginx ; limites par utilisateur pour l’IA ; pool SQL borné ; timers | DDoS distribué, réponse fournisseur lente ; proxy public/WAF, budgets et supervision nécessaires |
 | SSRF / fuite vers une URL arbitraire | Hôtes fixes météo/IA et clients fournisseurs restreints ; jetons exclus des exports | Revoir toute future URL configurable ; filtrer les sorties réseau en production |
 | Perte ou écrasement de données | Volume PostgreSQL, migrations, contrôle de révision, export ; tests de conflit | Volume détruit ou serveur perdu ; sauvegarde chiffrée et restauration testée restent à organiser |
 | Divulgation de secrets / logs | `.env` exclu, clé IA serveur, mots de passe/tokens hachés, logger sans corps | Fichier .env, accès Docker et logs proxy sensibles ; permissions, rotation et rétention à définir |
@@ -126,7 +126,7 @@ curl http://127.0.0.1:8080/about.json
 
 Préparer la base navigateur et Chromium selon le README. Pour la démonstration : afficher `about.json` sans connexion, montrer deux météos avec villes distinctes, modifier un intervalle, recharger la sauvegarde, passer à 320/390 px, activer les deux réglages de lecture puis parcourir au clavier. Expliquer ensuite la conservation PostgreSQL, les limites assumées et une alternative par couche.
 
-Les essais OAuth avec des comptes réels, la consommation réelle de l’API OpenAI et l’audit complet de sécurité/accessibilité restent des validations séparées. Aucun point supplémentaire n’est garanti par ce document.
+Les essais OAuth avec des comptes réels, la qualité des réponses du modèle local et l’audit complet de sécurité/accessibilité restent des validations séparées. Aucun point supplémentaire n’est garanti par ce document.
 
 ## Complément : doublons et majuscules/minuscules
 
@@ -140,3 +140,17 @@ Preuves : `frontend/tests/layout.test.mjs` et `frontend/e2e/widget-duplicates.sp
 Une valeur `MAIL_FROM` non entourée de guillemets interrompait la lecture du `.env` avant la clé OpenAI. Le fichier local a été corrigé, le doublon supprimé et les identifiants SMTP réels conservés commentés pour le mode Mailpit. Le modèle `.env.example` a également été corrigé. Le démarrage échoue désormais explicitement sur une syntaxe invalide, sans afficher les valeurs du fichier.
 
 Un appel de diagnostic réel a atteint OpenAI mais a reçu HTTP 429 avec `credit_balance_exhausted`. La configuration est lisible ; les réponses restent bloquées par le crédit du compte API. Le serveur distingue maintenant le crédit épuisé, les limites de dépenses et les limites temporaires de requêtes avec des messages sûrs. Aucun réapprovisionnement du compte n’a été effectué.
+
+## Complément : remplacement d’OpenAI par un modèle local
+
+À la demande de l’utilisateur, l’intégration OpenAI décrite dans le diagnostic précédent a été remplacée par **Ollama + Qwen2.5 3B**. Le crédit API épuisé ne bloque plus le widget : aucun appel OpenAI et aucune clé API ne sont utilisés. Le premier lancement télécharge le modèle, puis les questions sont traitées sur le serveur Lumi.
+
+Modifications : services Docker Ollama/initialisation et volume persistant, configuration `.env.example`, client Rust local avec contrôle de disponibilité et quota, textes et état du widget, activation du service, migration des seuls anciens titres par défaut, délai proxy dédié, information sur les données et tests. Les identifiants techniques historiques restent compatibles. Le [bilan détaillé](ASSISTANT_LOCAL.md) donne le choix du modèle, les commandes, les limites et les vérifications.
+
+## Complément : réponse arithmétique erronée
+
+Le cas utilisateur `12 × 3,1 × 2 − 31,4` retournait 91,7 au lieu de 43. Le serveur dispose maintenant d’un calculateur décimal qui exécute les quatre opérations de base et affiche l’expression interprétée. Une phrase est traduite par le modèle en JSON contraint, puis les nombres et l’expression sont validés avant calcul ; aucun résultat numérique final n’est rédigé par le modèle pour ce parcours. Le modèle 3B est conservé avec consignes renforcées et température de 0,1 ; la fiabilité des opérations prises en charge repose sur le calculateur. Les limites de traduction et de couverture sont détaillées dans [ASSISTANT_LOCAL.md](ASSISTANT_LOCAL.md).
+
+## Complément : passage au modèle 14B après nettoyage
+
+À la demande de l’utilisateur, le modèle par défaut passe à **Qwen2.5 14B**, en local sans clé API. Le nettoyage du répertoire personnel a libéré l’espace nécessaire au téléchargement d’environ 9 Go. La configuration locale `.env`, le modèle `.env.example`, les valeurs par défaut Rust/Docker et la documentation sont alignés. Le calculateur décimal, les quotas, l’authentification et les contrôles sur les demandes restent actifs. Le guide [ASSISTANT_LOCAL.md](ASSISTANT_LOCAL.md) présente le choix et les limites ; les essais effectifs sont ajoutés au journal de validation.

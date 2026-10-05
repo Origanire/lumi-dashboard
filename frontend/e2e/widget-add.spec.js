@@ -25,14 +25,14 @@ test('a new service is visible, can be activated, and its widget is saved', asyn
     createRoot(host).render(React.createElement(Dashboard, { userId: 'test-user' }));
   });
   await page.getByRole('button', { name: 'Ajouter un widget' }).click();
-  await page.getByRole('button', { name: /ChatGPT · Demander/ }).click();
+  await page.getByRole('button', { name: /Assistant IA local · Poser/ }).click();
   const add = page.getByRole('button', { name: /Ajouter au dashboard/ });
   await expect(add).toBeDisabled();
-  await page.getByRole('button', { name: 'Activer le service OpenAI', exact: true }).click();
+  await page.getByRole('button', { name: 'Activer le service Ollama', exact: true }).click();
   await expect(add).toBeEnabled();
   expect(activated).toBe(true);
   await add.click();
-  await expect(page.getByRole('heading', { name: 'ChatGPT · Demander à l’IA' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Assistant IA local · Poser une question' })).toBeVisible();
   await expect.poll(() => saved?.widgets?.[0]?.type).toBe('openai_chat');
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });

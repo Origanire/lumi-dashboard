@@ -160,7 +160,7 @@ Tous les widgets possèdent un titre et une taille configurables.
 | --- | --- | --- | --- |
 | GitHub | Push récents | Dépôt, 1–20 événements, intervalle 300–3600 s | Dépôts publics ou jeton personnel, cache mémoire 30 s |
 | GitHub | Graphe des commits | Dépôt, intervalle 300–3600 s | Branches et commits, historique des observations en session |
-| OpenAI | Demander à l’IA | Titre et taille | Demande explicite, clé API côté serveur |
+| Ollama | Assistant IA local | Titre et taille | Demande explicite, Qwen2.5 14B sans clé API |
 | Spotify | Lecture en cours | Client ID, rafraîchissement 5–120 s | OAuth PKCE, validation avec compte réel restante |
 | Spotify | Top titres | Client ID, période, 1–10 titres, intervalle 30–3600 s | Actualisation périodique |
 | Gmail | Non lus | Client ID, 1–20 messages, intervalle 30–3600 s | OAuth, lecture et actions explicites |
@@ -232,14 +232,13 @@ Les tests de services unitaires utilisent des réponses simulées. Ils ne rempla
 
 La connexion Spotify s’ouvre dans une fenêtre dédiée : le dashboard reste ouvert et conserve les connexions Gmail, Calendar et GitHub en mémoire. Autoriser les fenêtres contextuelles pour Lumi. Un rechargement manuel de la page efface toujours les jetons externes.
 
-## Widget OpenAI / ChatGPT
+## Assistant IA local (Ollama)
 
-Renseigner `OPENAI_API_KEY` dans le `.env` racine, puis redémarrer `npm run dev`. `OPENAI_MODEL` sélectionne le modèle serveur (défaut `gpt-4.1-mini`). La clé reste privée côté Rust, jamais dans `VITE_*`, dans un widget ou dans son export.
+Le widget utilise **Qwen2.5 14B**, un modèle multilingue exécuté par Ollama sur le serveur Lumi. Aucune clé API ni compte fournisseur n’est nécessaire. `npm run dev` démarre les services et télécharge automatiquement le modèle au premier lancement (environ 9 Go, en plus de l’image Docker). `docker compose up --build` initialise également le modèle avant le backend. Le volume `ollama_data` conserve le téléchargement.
 
-Activer **OpenAI / ChatGPT** dans **Mon compte → Mes services**, puis ajouter **ChatGPT · Demander à l’IA**. Saisir un texte et cliquer sur Envoyer. Chaque demande est indépendante ; aucun envoi automatique, historique de conversation ou accès aux autres widgets. Le texte est transmis à OpenAI uniquement lors de l’envoi. Le résultat reste en mémoire dans le widget, avec effacement manuel possible.
+Activer **Assistant IA local** dans **Mon compte → Mes services**, puis ajouter **Assistant IA local · Poser une question**. Les anciens widgets sont conservés. Chaque demande est indépendante, sans historique stocké en base ni accès aux autres widgets. La réponse peut prendre plus de temps sur CPU, surtout au premier envoi. Les demandes arithmétiques courantes passent par un calculateur décimal ; l’expression interprétée et le résultat calculé s’affichent. Pour les quatre opérations de base, une expression explicite permet de calculer directement sans modèle.
 
-Le service utilise l’[API Responses](https://developers.openai.com/api/docs/guides/migrate-to-responses) avec `store: false`, une réponse limitée à 1 500 tokens et cinq demandes par minute par utilisateur. Une clé API OpenAI valide et un compte API disposant d’un quota sont nécessaires. Les éventuelles erreurs de quota ou configuration s’affichent dans le widget.
-
+Configuration locale : `OLLAMA_URL=http://127.0.0.1:11435`, `OLLAMA_PORT=11435` et `OLLAMA_MODEL=qwen2.5:14b`. Dans Docker, le backend utilise automatiquement `http://ollama:11434`. Le port hôte reste limité à localhost. Les questions restent sur le serveur de cette instance ; les fonctionnalités cloud d’Ollama sont désactivées. Une connexion Internet est nécessaire à l’installation, puis le modèle peut répondre hors ligne. Voir [le bilan et le guide de l’assistant local](docs/ASSISTANT_LOCAL.md).
 
 ## Corrections après soutenance
 
@@ -250,10 +249,6 @@ Le POC se lance avec `npm run services` puis `npm run poc` ; voir [son protocole
 **Accessibilité** ouvre les réglages de texte agrandi et de contraste. **Mon compte → Vos données** précise le stockage PostgreSQL, les préférences locales et les transferts vers les fournisseurs. Nginx limite les API par IP et les corps JSON à 1 Mio ; ces protections complètent les contrôles existants et concernent l’accès via le proxy Docker.
 
 
-### Diagnostic du widget OpenAI
+### Configuration du serveur
 
-Une valeur `.env` contenant des espaces doit être entre guillemets, par exemple `MAIL_FROM="Lumi <noreply@lumi.local>"`. Une erreur avant `OPENAI_API_KEY` empêchait auparavant son chargement ; le serveur refuse désormais de démarrer avec un `.env` mal formé et affiche un diagnostic sans divulguer les valeurs. Redémarrer `npm run dev` après modification et recharger le dashboard.
-
-Pour Mailpit (`SMTP_SECURITY=local`), laisser `SMTP_USERNAME` et `SMTP_PASSWORD` vides ou commentés. Pour un SMTP réel, utiliser TLS/STARTTLS et une configuration cohérente.
-
-Le message « crédit API épuisé » correspond au code fournisseur `credit_balance_exhausted`. Il faut réapprovisionner le compte API ; redémarrer ou multiplier les demandes ne corrige pas ce cas. Les limites temporaires de requêtes sont signalées séparément. Voir les [codes d’erreur officiels OpenAI](https://developers.openai.com/api/docs/guides/error-codes).
+Une valeur `.env` contenant des espaces doit être entre guillemets, par exemple `MAIL_FROM="Lumi <noreply@lumi.local>"`. Le serveur refuse de démarrer avec un `.env` mal formé, sans divulguer ses valeurs. Redémarrer après modification. Pour Mailpit (`SMTP_SECURITY=local`), laisser `SMTP_USERNAME` et `SMTP_PASSWORD` vides ou commentés.

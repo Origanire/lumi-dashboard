@@ -14,6 +14,7 @@ use utoipa_swagger_ui::SwaggerUi;
 pub mod about;
 pub mod admin;
 pub mod auth;
+mod calculator;
 pub mod email_auth;
 mod error;
 pub mod google_auth;
