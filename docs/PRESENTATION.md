@@ -20,12 +20,14 @@ La vidéo `demo/lumi-demo.mp4` illustre les fonctionnalités locales. Elle n’a
 
 ## 3. Les services — 2 minutes
 
-Dans Mon compte, montrer les quatre abonnements. Distinguer activation dans le catalogue et consentement du fournisseur.
+Dans Mon compte, montrer les cinq abonnements (quatre fournisseurs et l’assistant local). La météo est disponible sans abonnement. Distinguer activation dans le catalogue et consentement du fournisseur.
 
 - GitHub : dépôt public, liste des push et graphe de commits. Montrer la fréquence d’actualisation et expliquer le cache de trente secondes.
 - Gmail : messages non lus et rédaction ; n’envoyer qu’à une adresse de test autorisée.
 - Calendar : agenda principal, planning et événements longs classés par échéance.
 - Spotify : lecture courante et top titres avec des paramètres différents.
+- Météo : deux villes, données Open-Meteo et intervalle configurable.
+- Assistant local : Ollama/Qwen2.5 14B, demande explicite sans clé API ; prévoir le délai CPU.
 
 Utiliser des comptes déjà autorisés avant la soutenance. Si un fournisseur est indisponible, montrer le message d’erreur et expliquer ce qui a réellement été vérifié. Les essais OAuth encore ouverts sont listés dans `RECETTE.md`.
 
