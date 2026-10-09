@@ -1,3 +1,4 @@
+pub mod habits;
 use axum::{
     Json, Router,
     http::StatusCode,
