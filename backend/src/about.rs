@@ -29,6 +29,7 @@ fn widget(name: &str, description: &str, params: &[(&str, &str)]) -> Value {
     let mut parameters = vec![json!({"name": "title", "type": "string"})];
     if ![
         "openai_chat",
+        "habits",
         "notes",
         "focus",
         "gmail_compose",
@@ -67,6 +68,7 @@ pub fn catalog() -> Value {
         ]},
         {"name": "weather", "widgets": [widget("weather", "Conditions actuelles Open-Meteo", &[("city", "string")])]},
         {"name": "local", "widgets": [
+            widget("habits", "Suivi quotidien des habitudes", &[]),
             widget("notes", "Notes personnelles persistées", &[("content", "string")]),
             widget("focus", "Minuteur local", &[("duration", "integer")])
         ]}
