@@ -12,6 +12,7 @@ test('Spotify authorization preserves the dashboard and an existing GitHub conne
     json: { access_token: 'test-token', refresh_token: 'test-refresh', expires_in: 3600 },
   }));
   await page.goto('/');
+  await expect(page.getByRole('button', { name: 'Se connecter', exact: true }).first()).toBeVisible();
   const result = await page.evaluate(async () => {
     const spotify = await import('/src/widgets/spotify/spotifyClient.js');
     const github = await import('/src/widgets/github/githubSession.js');
