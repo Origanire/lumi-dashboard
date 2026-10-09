@@ -159,12 +159,12 @@ pub async fn confirm_email(
 pub async fn consume_magic(
     State(state): State<AppState>,
     Json(input): Json<TokenRequest>,
-) -> Result<Json<auth::LoginResponse>, ApiError> {
+) -> Result<(axum::http::HeaderMap, Json<auth::LoginResponse>), ApiError> {
     let mut tx = state.pool.begin().await?;
     let id = consume(&mut tx, &input.token, "magic").await?;
     let result = auth::create_session(&mut tx, id).await?;
     tx.commit().await?;
-    Ok(Json(result))
+    Ok(auth::session_response(result))
 }
 
 #[utoipa::path(post,path="/api/auth/password/reset",request_body=ResetRequest,responses((status=200,body=MessageResponse),(status=400,body=MessageResponse)))]
