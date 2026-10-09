@@ -4,13 +4,13 @@ Projet de tableau de bord réalisé dans le cadre du module G-WEB-500.
 
 ## Présentation
 
-L'application propose des dashboards personnalisables, sauvegardés dans le compte utilisateur, avec quatre intégrations externes.
+L'application propose des dashboards personnalisables, sauvegardés dans le compte utilisateur, avec cinq intégrations externes (GitHub, Spotify, Gmail, Google Calendar et Open-Meteo), un assistant IA local Ollama et deux outils locaux.
 
 Lumi rassemble des notes, un minuteur de concentration et des widgets dans un tableau de bord personnalisable. L’interface React communique avec une API Rust pour les comptes et les sessions.
 
 Le sujet du projet est disponible dans [dashboard-project.pdf](docs/dashboard-project.pdf).
 
-La liste des tâches et des priorités est disponible dans [TODO.md](docs/TODO.md).
+La liste des tâches et des priorités est disponible dans [TODO.md](docs/TODO.md). Le [contrôle du 9 octobre 2026](docs/VERIFICATION_2026-10-09.md) détaille les résultats actuels et les réserves de conformité.
 
 Les règles visuelles et les composants de référence sont décrits dans [DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md).
 
@@ -41,7 +41,7 @@ npm install
 
 ## Configuration
 
-Copier la configuration locale puis démarrer PostgreSQL et la boîte mail locale :
+Copier la configuration locale puis démarrer PostgreSQL, la boîte mail locale et Ollama :
 
 ```bash
 cp .env.example .env
@@ -64,7 +64,7 @@ Voir le [contrat API des comptes](docs/api/accounts.md) pour le modèle relation
 
 ## Lancement
 
-`npm run dev` démarre automatiquement PostgreSQL et Mailpit via Docker Compose, attend leur disponibilité, puis lance le backend et Vite. Docker doit être démarré.
+`npm run dev` démarre automatiquement PostgreSQL, Mailpit et Ollama via Docker Compose, attend leur disponibilité et initialise le modèle Qwen2.5 14B, puis lance le backend et Vite. Docker doit être démarré. Le premier lancement télécharge environ 9 Go de modèle, en plus des images Docker.
 
 ### Développement
 
@@ -144,9 +144,9 @@ docker compose build
 docker compose up -d --wait
 ```
 
-Ouvrir **http://localhost:8080**. Nginx sert React et transmet `/api` et `/about.json` au backend Rust ; PostgreSQL et Mailpit démarrent avec l’application. Les migrations sont appliquées automatiquement. Les e-mails locaux restent consultables sur http://localhost:8025. `docker-compose build` et `docker-compose up` conviennent également si le binaire Compose historique est installé.
+Ouvrir **http://localhost:8080**. Nginx sert React et transmet `/api` et `/about.json` au backend Rust ; PostgreSQL, Mailpit et Ollama démarrent avec l’application ; le backend attend l’initialisation du modèle. Les migrations sont appliquées automatiquement. Les e-mails locaux restent consultables sur http://localhost:8025. `docker-compose build` et `docker-compose up` conviennent également si le binaire Compose historique est installé.
 
-Le fichier racine est `docker-compose.yml`. `npm run services` continue à ne lancer que PostgreSQL et Mailpit pour le développement. `docker compose down` arrête la stack sans effacer les données ; ne pas ajouter `-v` si les comptes doivent être conservés.
+Le fichier racine est `docker-compose.yml`. `npm run services` démarre PostgreSQL, Mailpit et Ollama, puis initialise le modèle pour le développement. `docker compose down` arrête la stack sans effacer les données ; ne pas ajouter `-v` si les comptes doivent être conservés.
 
 `DOCKER_APP_URL` permet de changer l’origine utilisée dans les liens e-mail Docker (défaut `http://localhost:8080`). Cette stack utilise Mailpit ; pour un déploiement public, configurer un serveur SMTP réel et HTTPS. Les identifiants OAuth `VITE_GOOGLE_CLIENT_ID` et `VITE_SPOTIFY_CLIENT_ID` sont injectés à la compilation : reconstruire l’image frontend après modification et autoriser l’origine/URL de retour correspondante chez le fournisseur.
 
@@ -185,6 +185,9 @@ flowchart LR
   A --> M[Mailpit / SMTP]
   B --> G[Google Calendar / Gmail]
   B --> S[Spotify]
+  B --> GH[GitHub]
+  B --> W[Open-Meteo]
+  A --> O[Ollama / Qwen2.5]
 ```
 
 Les comptes, sessions, dashboards et abonnements sont conservés en PostgreSQL. Chaque opération de dashboard vérifie le propriétaire depuis la session. Les versions de sauvegarde détectent les modifications concurrentes et demandent de recharger en cas de conflit. Les intégrations externes sont appelées depuis le navigateur ; les jetons Google restent en mémoire, et les jetons Spotify/GitHub sont conservés uniquement en mémoire, liés à la session Lumi. Les routes privées utilisent la session et les permissions vérifiées par le serveur.
@@ -252,3 +255,25 @@ Le POC se lance avec `npm run services` puis `npm run poc` ; voir [son protocole
 ### Configuration du serveur
 
 Une valeur `.env` contenant des espaces doit être entre guillemets, par exemple `MAIL_FROM="Lumi <noreply@lumi.local>"`. Le serveur refuse de démarrer avec un `.env` mal formé, sans divulguer ses valeurs. Redémarrer après modification. Pour Mailpit (`SMTP_SECURITY=local`), laisser `SMTP_USERNAME` et `SMTP_PASSWORD` vides ou commentés.
+
+### Envoyer les confirmations avec Gmail (développement)
+
+Activer la validation en deux étapes du compte expéditeur puis créer un [mot de passe d’application Google](https://myaccount.google.com/apppasswords) nommé Lumi. Voir les [conditions Google](https://support.google.com/mail/answer/185833?hl=fr) si cette option n’est pas disponible. Le mot de passe habituel du compte Google ne convient pas.
+
+Dans `.env` à la racine, remplacer les paramètres Mailpit :
+
+```dotenv
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURITY=starttls
+SMTP_USERNAME=votre.adresse@gmail.com
+SMTP_PASSWORD=mot_de_passe_application_sans_espaces
+MAIL_FROM="Lumi <votre.adresse@gmail.com>"
+APP_URL=http://127.0.0.1:5174
+```
+
+`SMTP_USERNAME` et `MAIL_FROM` doivent utiliser votre adresse expéditrice. Garder le mot de passe d’application dans `.env`, jamais dans Git ou dans une variable `VITE_*`. Les [paramètres SMTP Google](https://support.google.com/mail/answer/7104828?hl=fr) utilisent STARTTLS sur le port 587.
+
+Arrêter le processus `npm run dev` existant avec Ctrl+C, puis le relancer pour recharger `.env`. Créer un nouveau compte Lumi avec une adresse réelle ou demander le renvoi de confirmation (une minute minimum entre deux demandes). Les comptes de test initialisés sont déjà confirmés. Les anciens messages Mailpit ne sont pas réexpédiés.
+
+Les liens utilisant `127.0.0.1` doivent être ouverts sur l’ordinateur où Lumi tourne. Pour des destinataires sur d’autres appareils, configurer une origine HTTPS accessible. La stack Docker conserve sa configuration Mailpit propre : cette procédure concerne `npm run dev`.
