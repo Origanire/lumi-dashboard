@@ -43,6 +43,7 @@ fn validate(input: &DashboardInput) -> Result<(), ApiError> {
             .ok_or(ApiError::invalid("Widget invalide."))?;
         let kind = widget["type"].as_str().unwrap_or("");
         let specific: &[&str] = match kind {
+            "habits" => &["habits"],
             "notes" => &["content"],
             "focus" => &["duration", "completed"],
             "weather" => &["city", "temperature", "condition"],
@@ -67,6 +68,10 @@ fn validate(input: &DashboardInput) -> Result<(), ApiError> {
                 && !specific.contains(&key.as_str())
             {
                 return Err(ApiError::invalid("Paramètre de widget non autorisé."));
+            }
+            if kind == "habits" && key == "habits" {
+                crate::habits::validate(value)?;
+                continue;
             }
             if value.is_object()
                 || value.is_array()
