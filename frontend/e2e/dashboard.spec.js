@@ -43,8 +43,9 @@ test('dashboard editing, persistence, multiple instances, export/import and serv
   await page.getByRole('button',{name:'Annuler',exact:true}).click();
   await expect(page.getByRole('heading',{name:'Note B',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Mon compte',exact:false}).click();
-  const activate=page.getByRole('button',{name:'Activer GitHub',exact:true});
-  if (await activate.count()) await activate.click();
+  const githubToggle = page.getByRole('button', { name: /^(Activer|Désactiver) GitHub$/ });
+  await expect(githubToggle).toBeVisible();
+  if (await githubToggle.getAttribute('aria-pressed') === 'false') await githubToggle.click();
   await expect(page.getByRole('button',{name:'Désactiver GitHub',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Tableau de bord',exact:false}).click();
   await page.getByRole('button',{name:'Ajouter un widget',exact:false}).first().click();
@@ -77,7 +78,9 @@ test('GitHub outage is explicit and loading recovers without losing configuratio
   await page.route('https://api.github.com/**',route=>route.fulfill({status:503,body:'Unavailable'}));
   await login(page);
   await page.getByRole('button',{name:'Mon compte',exact:false}).click();
-  const activate=page.getByRole('button',{name:'Activer GitHub',exact:true});if(await activate.count()) await activate.click();
+  const githubToggle = page.getByRole('button', { name: /^(Activer|Désactiver) GitHub$/ });
+  await expect(githubToggle).toBeVisible();
+  if (await githubToggle.getAttribute('aria-pressed') === 'false') await githubToggle.click();
   await expect(page.getByRole('button',{name:'Désactiver GitHub',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Tableau de bord',exact:false}).click();
   await page.getByRole('button',{name:'Nouveau dashboard',exact:true}).click();
@@ -119,9 +122,7 @@ test('edits made while a save is in flight are saved before reporting success',a
   await expect(page.getByLabel('Contenu de Saisie rapide')).toHaveValue('Dernière version');
 });
 test.afterEach(async ({page}) => {
-  const token=await page.evaluate(()=>sessionStorage.getItem('lumi_token')).catch(()=>null);
-  if (!token) return;
-  const headers={Authorization:`Bearer ${token}`};
+  const headers={'X-Lumi-Client':'web'};
   const response=await page.request.get('/api/dashboards',{headers});
   if (!response.ok()) return;
   for (const item of await response.json()) {
