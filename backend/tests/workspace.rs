@@ -406,3 +406,46 @@ async fn calculator_requires_subscription_and_preserves_request_quota(pool: PgPo
         429
     );
 }
+
+#[sqlx::test]
+async fn habits_history_is_validated_persisted_and_private(pool: PgPool) {
+    let app = lumi_backend::app(pool.clone());
+    let (token, _) = account(&pool, &app, "habits@test.local").await;
+    let (other, _) = account(&pool, &app, "other-habits@test.local").await;
+    let widget = json!({"id":"tracker","type":"habits","title":"Rituels","x":1,"y":1,"width":12,"height":4,"habits":[{"id":"read","name":"Lire","days":["2024-02-29","2026-10-09"]}]});
+    let body = json!({"name":"Habitudes","widgets":[widget.clone()]});
+    let (status, created) = request(&app, "POST", "/api/dashboards", &token, body).await;
+    assert_eq!(status, 201, "{created}");
+    let restarted = lumi_backend::app(pool);
+    let (status, boards) = request(&restarted, "GET", "/api/dashboards", &token, Value::Null).await;
+    assert_eq!(status, 200);
+    assert_eq!(boards[0]["widgets"][0], widget);
+    assert_eq!(
+        request(&restarted, "GET", "/api/dashboards", &other, Value::Null)
+            .await
+            .1,
+        json!([])
+    );
+    for habits in [
+        json!({}),
+        json!([{"id":"a","name":" ","days":[]}]),
+        json!([{"id":"a","name":"Lire","days":["2026-02-29"]}]),
+        json!([{"id":"a","name":"Lire","days":["2026-10-09","2026-10-09"]}]),
+        json!([{"id":"a","name":"Lire","days":[],"token":"private"}]),
+    ] {
+        let mut invalid = widget.clone();
+        invalid["habits"] = habits;
+        assert_eq!(
+            request(
+                &restarted,
+                "POST",
+                "/api/dashboards",
+                &token,
+                json!({"name":"Invalide","widgets":[invalid]})
+            )
+            .await
+            .0,
+            400
+        );
+    }
+}
