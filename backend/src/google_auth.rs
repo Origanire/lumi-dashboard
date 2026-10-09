@@ -137,7 +137,7 @@ async fn consume_nonce(pool: &sqlx::PgPool, nonce: &str) -> Result<(), ApiError>
 pub async fn login(
     State(state): State<AppState>,
     Json(input): Json<Credential>,
-) -> Result<Json<LoginResponse>, ApiError> {
+) -> Result<(axum::http::HeaderMap, Json<LoginResponse>), ApiError> {
     let claims = identity(&state, input).await?;
     let mut tx = state.pool.begin().await?;
     // Serialize creation for one Google subject, including the first connection.
@@ -191,7 +191,7 @@ pub async fn login(
     };
     let session = create_session(&mut tx, id).await?;
     tx.commit().await?;
-    Ok(Json(session))
+    Ok(crate::auth::session_response(session))
 }
 #[utoipa::path(post, path = "/api/auth/google/link", request_body = Credential, responses((status = 200, description = "Succès"), (status = 400, description = "Paramètres invalides"), (status = 401, description = "Authentification requise")))]
 pub async fn link(
