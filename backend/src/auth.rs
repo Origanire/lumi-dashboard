@@ -2,7 +2,7 @@ use crate::{AppState, MessageResponse, error::ApiError};
 use axum::{
     Json,
     extract::{FromRequestParts, State},
-    http::{StatusCode, request::Parts},
+    http::{HeaderMap, HeaderValue, StatusCode, request::Parts},
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -55,6 +55,8 @@ pub struct UserResponse {
     roles: Vec<Role>,
     companies: Vec<CompanyResponse>,
     email_verified: bool,
+    /// Non-secret fingerprint used to isolate provider state between sessions.
+    session_tag: String,
 }
 #[derive(FromRow)]
 struct Account {
@@ -65,10 +67,56 @@ struct Account {
     email_verified: bool,
 }
 
+pub const SESSION_COOKIE: &str = "lumi_session";
+
+pub fn cookie_token(headers: &HeaderMap) -> Option<&str> {
+    headers
+        .get_all("cookie")
+        .iter()
+        .filter_map(|value| value.to_str().ok())
+        .flat_map(|value| value.split(';'))
+        .filter_map(|part| part.trim().split_once('='))
+        .find_map(|(key, value)| {
+            (key == SESSION_COOKIE
+                && value.len() == 64
+                && value.bytes().all(|c| c.is_ascii_hexdigit()))
+            .then_some(value)
+        })
+}
+
+pub fn session_cookie(token: &str, seconds: u64) -> HeaderMap {
+    let secure = if std::env::var("APP_URL")
+        .unwrap_or_default()
+        .starts_with("https://")
+    {
+        "; Secure"
+    } else {
+        ""
+    };
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        "set-cookie",
+        HeaderValue::from_str(&format!(
+            "{SESSION_COOKIE}={token}; Path=/api; HttpOnly; SameSite=Lax; Max-Age={seconds}{secure}"
+        ))
+        .expect("server-generated session token"),
+    );
+    headers
+}
+
+pub(crate) fn session_response(session: LoginResponse) -> (HeaderMap, Json<LoginResponse>) {
+    (
+        session_cookie(&session.token, 7 * 24 * 60 * 60),
+        Json(session),
+    )
+}
+
 pub struct AuthUser {
     pub id: Uuid,
     pub role: Role,
     token_hash: String,
+    token: String,
+    expires_in: u64,
 }
 pub(crate) fn hash_token(token: &str) -> String {
     format!("{:x}", Sha256::digest(token.as_bytes()))
@@ -89,19 +137,29 @@ impl FromRequestParts<AppState> for AuthUser {
             .and_then(|v| v.to_str().ok())
             .and_then(|v| v.strip_prefix("Bearer "))
             .filter(|v| !v.is_empty())
+            .or_else(|| cookie_token(&parts.headers))
             .ok_or_else(ApiError::unauthorized)?;
         let token_hash = hash_token(token);
-        let (id, role) = sqlx::query_as(
-            "SELECT s.user_id, s.role FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.email_verified_at IS NOT NULL",
+        let (id, role, expires_in): (Uuid, Role, i64) = sqlx::query_as(
+            "SELECT s.user_id, s.role, GREATEST(FLOOR(EXTRACT(EPOCH FROM (s.expires_at - now()))), 0)::bigint FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.email_verified_at IS NOT NULL",
         )
         .bind(&token_hash)
         .fetch_optional(&state.pool)
         .await?
         .ok_or_else(ApiError::unauthorized)?;
+        if parts
+            .headers
+            .get("x-lumi-account")
+            .is_some_and(|value| value.to_str().ok() != Some(id.to_string().as_str()))
+        {
+            return Err(ApiError::unauthorized());
+        }
         Ok(Self {
             id,
             role,
             token_hash,
+            token: token.to_owned(),
+            expires_in: expires_in as u64,
         })
     }
 }
@@ -145,6 +203,7 @@ async fn response(
         roles,
         companies,
         email_verified: account.email_verified,
+        session_tag: String::new(),
     })
 }
 
@@ -249,7 +308,7 @@ pub async fn register(
 pub async fn login(
     State(state): State<AppState>,
     Json(input): Json<LoginRequest>,
-) -> Result<Json<LoginResponse>, ApiError> {
+) -> Result<(HeaderMap, Json<LoginResponse>), ApiError> {
     if input.email.len() > 254 || input.password.len() > 1024 {
         return Err(ApiError::invalid("Identifiants trop longs."));
     }
@@ -290,7 +349,7 @@ pub async fn login(
         .execute(&mut *tx)
         .await?;
     tx.commit().await?;
-    Ok(Json(result))
+    Ok(session_response(result))
 }
 
 pub(crate) fn new_token() -> String {
@@ -324,8 +383,9 @@ pub(crate) async fn create_session(
          LIMIT 1 FOR KEY SHARE"
     ).bind(id).fetch_optional(&mut *connection).await?
         .ok_or(ApiError(StatusCode::FORBIDDEN, "Aucun rôle n'est attribué à votre compte."))?;
-    let user = response(connection, account, role).await?;
+    let mut user = response(connection, account, role).await?;
     let token = new_token();
+    user.session_tag = hash_token(&token)[..24].to_owned();
     sqlx::query("INSERT INTO sessions (token_hash, user_id, role) VALUES ($1,$2,$3)")
         .bind(hash_token(&token))
         .bind(id)
@@ -339,27 +399,32 @@ pub(crate) async fn create_session(
 pub async fn current_user(
     State(state): State<AppState>,
     user: AuthUser,
-) -> Result<Json<UserResponse>, ApiError> {
+) -> Result<(HeaderMap, Json<UserResponse>), ApiError> {
     let account = sqlx::query_as("SELECT id, email, name, password_hash, email_verified_at IS NOT NULL AS email_verified FROM users WHERE id = $1")
         .bind(user.id)
         .fetch_optional(&state.pool)
         .await?
         .ok_or_else(ApiError::unauthorized)?;
     let mut connection = state.pool.acquire().await?;
-    Ok(Json(response(&mut connection, account, user.role).await?))
+    let mut result = response(&mut connection, account, user.role).await?;
+    result.session_tag = user.token_hash[..24].to_owned();
+    Ok((session_cookie(&user.token, user.expires_in), Json(result)))
 }
 #[utoipa::path(post, path = "/api/auth/logout", security(("bearer" = [])), responses((status = 200, body = MessageResponse), (status = 401, body = MessageResponse)))]
 pub async fn logout(
     State(state): State<AppState>,
     user: AuthUser,
-) -> Result<Json<MessageResponse>, ApiError> {
+) -> Result<(HeaderMap, Json<MessageResponse>), ApiError> {
     sqlx::query("DELETE FROM sessions WHERE token_hash = $1")
         .bind(user.token_hash)
         .execute(&state.pool)
         .await?;
-    Ok(Json(MessageResponse {
-        message: "Déconnexion réussie.",
-    }))
+    Ok((
+        session_cookie("", 0),
+        Json(MessageResponse {
+            message: "Déconnexion réussie.",
+        }),
+    ))
 }
 
 pub async fn seed_demo(pool: &PgPool, email: &str, password_hash: &str) -> Result<(), sqlx::Error> {
