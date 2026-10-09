@@ -38,7 +38,7 @@ async fn public_catalog_has_client_time_and_typed_parameters() {
             }
         }
     }
-    assert_eq!(count, 12);
+    assert_eq!(count, 13);
 }
 
 #[test]
