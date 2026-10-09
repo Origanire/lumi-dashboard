@@ -25,7 +25,9 @@ test('demonstration locale enregistrée @demo',async ({page}, testInfo)=>{
   const id=await page.getByLabel('Dashboard actif').inputValue();await page.reload();await page.getByLabel('Dashboard actif').selectOption(id);
   await chapter('Après rechargement, les widgets et leurs paramètres sont restaurés.');
   await page.getByRole('button',{name:'Mon compte',exact:false}).click();
-  const activate=page.getByRole('button',{name:'Activer GitHub',exact:true});if(await activate.count()) await activate.click();
+  const githubToggle = page.getByRole('button', { name: /^(Activer|Désactiver) GitHub$/ });
+  await expect(githubToggle).toBeVisible();
+  if (await githubToggle.getAttribute('aria-pressed') === 'false') await githubToggle.click();
   await page.getByRole('heading',{name:'Mes services'}).scrollIntoViewIfNeeded();
   await chapter('Gestion des abonnements : Spotify, Gmail, Google Calendar et GitHub.');
   await page.getByRole('button',{name:'Tableau de bord',exact:false}).click();await page.getByRole('button',{name:'Ajouter un widget',exact:false}).first().click();await page.getByRole('button',{name:/GitHub · Graphe/}).click();await page.getByLabel('Dépôt GitHub',{exact:true}).fill('octocat/Hello-World');await page.getByLabel('Nom du widget').fill('Historique GitHub');
