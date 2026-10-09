@@ -1,9 +1,9 @@
 # To-do list du projet Lumi
 
-État du 29 septembre 2026. `[x]` signifie implémenté et vérifié dans le périmètre décrit ; `[ ]` désigne une validation encore nécessaire. Les tests simulés ne valent pas validation OAuth réelle.
+État actualisé le 9 octobre 2026. `[x]` signifie implémenté et vérifié dans le périmètre décrit ; `[ ]` désigne une validation encore nécessaire. Les tests simulés ne valent pas validation OAuth réelle.
 
 **Équipe : Milo Bousquet et Nathan Muzay, contribution commune à l’ensemble du projet. X = 2.**
-Objectif du sujet : **3 services minimum et 6 widgets de services minimum**. Le code contient 5 intégrations externes, 9 widgets externes et 3 outils/démonstrations locaux, soit 12 types.
+Objectif du sujet : **3 services minimum et 6 widgets de services minimum**. Le code contient 5 intégrations externes proposant 9 widgets, 1 assistant Ollama local et 2 outils locaux (Notes et Focus), soit 12 types répartis dans 7 groupes du catalogue public. Le minimum peut être atteint sans compter Ollama, Notes ou Focus.
 
 ## Must have — obligatoire
 
@@ -13,12 +13,13 @@ Objectif du sujet : **3 services minimum et 6 widgets de services minimum**. Le 
 - [x] Confirmation de l’inscription par e-mail : usage unique, expiration, limitation des renvois et connexion bloquée avant confirmation.
 - [x] Connexion et déconnexion ; liens de connexion et réinitialisation également disponibles.
 - [x] Protection des pages privées et vérification de session côté serveur.
-- [x] Gestion des abonnements aux services dans Mon compte ; préférences stockées en PostgreSQL et catalogue filtré. Les connexions fournisseurs restent distinctes des abonnements.
-- [ ] Valider réellement au moins 3 services. Spotify, Gmail, Calendar et GitHub codés ; GitHub public testé réellement. Comptes OAuth déclarés prêts par l’équipe, essais Google/Spotify à consigner dans [RECETTE.md](RECETTE.md).
-- [ ] Valider réellement au moins 6 widgets externes. Huit implémentés ; deux GitHub vérifiés sur dépôt public, validation des six Google/Spotify restante.
+- [x] Gestion des abonnements aux services dans Mon compte ; préférences stockées en PostgreSQL et activation requise dans le formulaire d’ajout. Les connexions fournisseurs restent distinctes des abonnements.
+- [ ] Appliquer l’abonnement préalable aux widgets initiaux et importés : un Calendar initial est actuellement présent sans abonnement ; les écritures de dashboard ne vérifient pas les abonnements côté serveur.
+- [ ] Valider réellement au moins 3 services. Spotify, Gmail, Calendar, GitHub et Open-Meteo codés ; GitHub public et météo testés réellement lors des validations précédentes. Comptes OAuth déclarés prêts par l’équipe, essais Google/Spotify à consigner dans [RECETTE.md](RECETTE.md).
+- [ ] Valider réellement au moins 6 widgets externes. Neuf implémentés ; deux GitHub et la météo vérifiés lors des validations précédentes, validation des six Google/Spotify restante.
 - [x] Au moins un paramètre configurable pour chaque widget : titre, paramètres métier, taille et/ou fréquence.
 - [x] Ajout d’un widget et configuration avant ajout.
-- [x] Fréquence de rafraîchissement par instance : Spotify lecture 5–120 s, Gmail/Calendar/Spotify Top 30–3600 s, GitHub 300–3600 s. Les outils locaux et l’envoi Gmail n’effectuent pas de polling.
+- [x] Fréquence de rafraîchissement par instance : Spotify lecture 5–120 s, Gmail/Calendar/Spotify Top 30–3600 s, GitHub et météo 300–3600 s. Les outils locaux et l’envoi Gmail n’effectuent pas de polling.
 - [x] Modification, déplacement et suppression d’un widget ; annulation de la dernière suppression.
 - [x] Plusieurs instances du même type avec des configurations différentes ; parcours Notes testé, paramètres distincts transmis aux clients des services. Résultats des instances OAuth à vérifier dans la recette fournisseur.
 - [x] Rafraîchissement automatique des widgets de données ; réduction du polling quand la page est cachée pour Gmail, Calendar, GitHub et Spotify Top.
@@ -27,12 +28,12 @@ Objectif du sujet : **3 services minimum et 6 widgets de services minimum**. Le 
 
 ### Livraison technique
 
-- [x] Stack Docker complète à la racine : React/Nginx, Rust, PostgreSQL et Mailpit.
-- [x] Construction et démarrage depuis un clone propre : `npm run check:clean` valide le clone, les tests, les builds Docker, les migrations et les endpoints HTTP.
-- [ ] Vérification finale de l’application sur `http://localhost:8080` après reconstruction.
+- [x] Stack Docker complète à la racine : React/Nginx, Rust, PostgreSQL, Mailpit et Ollama.
+- [ ] Rejouer `npm run check:clean` avec le modèle Ollama actuel. La validation du clone du 29 septembre précède son intégration ; les builds et tests du checkout courant sont suivis dans [le contrôle du 9 octobre](VERIFICATION_2026-10-09.md).
+- [x] Vérification de l’application sur `http://localhost:8080` après reconstruction le 9 octobre : démarrage complet, contrat public, contrôles HTTP et accueil mobile réussis.
 - [x] `GET /about.json` : IP client, heure Unix, catalogue des 12 widgets et paramètres typés ; test de cohérence frontend/backend ajouté.
 - [x] Présentation et scénario de démonstration préparés dans [PRESENTATION.md](PRESENTATION.md). Répétition des parcours OAuth à effectuer avec les comptes de l’équipe.
-- [x] Vérification finale du contenu livré et des artefacts ; bonus identifiés dans [BONUS.md](BONUS.md).
+- [ ] Conformité de livraison : les bonus sont inventoriés dans [BONUS.md](../BONUS.md), mais leurs sources ne sont pas regroupées dans le dossier `bonus/` exigé par le sujet. Examiner aussi le fichier sans lien avec l’application `work/visualizations/espace-disque.html`.
 
 ### Sécurité
 
@@ -58,7 +59,7 @@ Objectif du sujet : **3 services minimum et 6 widgets de services minimum**. Le 
 
 - [x] Page de profil avec gestion des abonnements.
 - [x] Administration des utilisateurs : recherche, rôles et révocation des sessions ; interdiction de modifier ses propres rôles.
-- [x] Erreurs API explicites et états de chargement sur les quatre intégrations ; panne GitHub et conflit de sauvegarde vérifiés dans le navigateur.
+- [x] Erreurs API explicites et états de chargement sur les intégrations ; panne GitHub et conflit de sauvegarde vérifiés dans le navigateur.
 - [x] Modification de la taille des widgets.
 - [x] Sauvegarde serveur persistante des configurations et positions ; récupération sur un autre appareil au rechargement, conflits détectés.
 - [x] Dashboards différents pour chaque utilisateur ; tests d’isolation en PostgreSQL.
@@ -66,7 +67,7 @@ Objectif du sujet : **3 services minimum et 6 widgets de services minimum**. Le 
 - [x] Logs backend JSON : route générique, statut, durée et identifiant de requête, sans corps ni jeton.
 - [x] Tests backend : authentification, confirmation, permissions, persistance, conflits, abonnements, administration, limitation des connexions et OIDC.
 - [x] Tests frontend unitaires et parcours navigateur : ajout, modification, position, suppression/annulation, persistance, import/export, services, mobile et erreurs.
-- [ ] Vidéo de démonstration : enregistrement final en cours, sortie prévue dans `docs/demo/lumi-demo.mp4`.
+- [x] Vidéo de démonstration présente dans `docs/demo/lumi-demo.mp4` ; elle présente le parcours local historique. Vérifier son adéquation aux derniers changements avant la soutenance.
 - [x] Documentation des choix d’architecture et des limites.
 
 ## Could have — bonus
@@ -93,12 +94,7 @@ Objectif du sujet : **3 services minimum et 6 widgets de services minimum**. Le 
 
 ## Vérifications
 
-- 35 tests frontend réussis et compilation Vite réussie.
-- 20 tests backend réussis, dont validation de signatures Google et refus de réutilisation du nonce.
-- 4 parcours navigateur réussis ; scénario vidéo exécuté séparément.
-- Construction Docker réussie ; contrôle du clone propre et démarrage final à consigner.
-- `npm audit --omit=dev` : aucune vulnérabilité signalée. Ce résultat ne constitue pas un audit de sécurité complet.
-- Détails et limites : [VALIDATION.md](VALIDATION.md).
+Les résultats actualisés, commandes et limites sont consignés dans [VERIFICATION_2026-10-09.md](VERIFICATION_2026-10-09.md). Les rapports [VALIDATION.md](VALIDATION.md) et [VALIDATION_REMEDIATION.md](VALIDATION_REMEDIATION.md) conservent les preuves historiques et ne remplacent pas la recette OAuth réelle.
 
 ## Validation nécessitant les comptes de l’équipe
 
@@ -106,4 +102,4 @@ Les applications OAuth sont déclarées prêtes sur `http://localhost:5174`. Gma
 
 Terminer les essais de [RECETTE.md](RECETTE.md), puis fermer les trois cases fournisseurs ci-dessus. Aucun envoi Gmail, événement privé ou consentement externe n’est déclaré validé sans essai réel.
 
-- [x] Widget OpenAI : saisie et réponse dans le dashboard, clé serveur, service activable, gestion des erreurs et tests automatisés. Appel réel à valider après configuration de `OPENAI_API_KEY`.
+- [x] Assistant local Ollama : Qwen2.5 14B, service activable, envoi explicite, calculateur décimal et tests automatisés. Les identifiants historiques `openai_chat` et `openai` restent compatibles ; aucune clé OpenAI n’est requise. Voir [ASSISTANT_LOCAL.md](ASSISTANT_LOCAL.md).
