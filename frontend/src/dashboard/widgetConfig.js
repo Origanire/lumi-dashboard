@@ -2,7 +2,7 @@ import { WIDGET_CONFIG_KEYS } from '../widgets/catalog.js';
 
 // Compare user text without changing the displayed value or case-sensitive client IDs.
 const caseInsensitiveFields = new Set(['title', 'content', 'city', 'githubRepo', 'gmailAccount']);
-const untimedTypes = new Set(['openai_chat', 'notes', 'focus', 'gmail_compose']);
+const untimedTypes = new Set(['habits', 'openai_chat', 'notes', 'focus', 'gmail_compose']);
 
 export function widgetConfigKey(widget) {
   const keys = [
