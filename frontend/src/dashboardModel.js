@@ -1,5 +1,7 @@
+import { cleanHabits } from './widgets/habits/habitModel.js';
 const common = ['id', 'type', 'title', 'x', 'y', 'width', 'height', 'refreshInterval'];
 const fields = {
+  habits: ['habits'],
   openai_chat: [],
   notes: ['content'], focus: ['duration', 'completed'], weather: ['city', 'temperature', 'condition'],
   agenda: [], calendar_week: [], github_pushes: ['githubRepo', 'githubLimit'], github_graph: ['githubRepo'],
@@ -34,6 +36,7 @@ export function cleanWidgets(widgets) {
     }
     const result = {};
     for (const key of [...common, ...fields[widget.type]]) {
+      if (key === 'habits') { result.habits = cleanHabits(widget.habits); continue; }
       if (widget[key] === undefined) continue;
       if (typeof widget[key] === 'object' || (typeof widget[key] === 'string' && widget[key].length > 8000)) throw new Error('Paramètre de widget invalide.');
       result[key] = widget[key];
