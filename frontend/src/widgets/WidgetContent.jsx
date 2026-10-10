@@ -1,3 +1,4 @@
+import HabitsWidget from './habits/HabitsWidget';
 import OpenAIWidget from './openai/OpenAIWidget';
 import React from 'react';
 import GitHubWidget from './github/GitHubWidget';
@@ -13,6 +14,8 @@ import SpotifyTopTracksWidget from './spotify/SpotifyTopTracksWidget';
 
 export default function WidgetContent({ widget, onChange, userId }) {
   switch (widget.type) {
+    case 'habits':
+      return <HabitsWidget widget={widget} onChange={onChange} />;
     case 'openai_chat':
       return <OpenAIWidget />;
     case 'github_pushes':
