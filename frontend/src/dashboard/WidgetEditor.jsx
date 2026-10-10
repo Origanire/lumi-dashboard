@@ -69,6 +69,7 @@ export default function WidgetEditor({ widget, mode, onClose, onSave }) {
     setDraft((current) => ({
       ...current,
       type: newType,
+      ...(newType === 'habits' && !current.habits ? { habits: ['Lire', 'Bouger', 'Prendre une pause'].map(name => ({ id: crypto.randomUUID(), name, days: [] })) } : {}),
       title: meta?.label || current.title,
       width: meta?.defaultWidth || current.width || 6,
       height: meta?.defaultHeight || current.height || 1,
