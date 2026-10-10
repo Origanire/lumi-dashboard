@@ -1,5 +1,6 @@
+import { rememberUser } from '../session';
 import GoogleSignIn from './GoogleSignIn';
-import { ROLE_LABELS, REGISTRATION_ROLES, SESSION_TOKEN_KEY } from '../config';
+import { ROLE_LABELS, REGISTRATION_ROLES } from '../config';
 import React, { useEffect, useState } from 'react';
 import Dialog from './Dialog';
 
@@ -39,7 +40,7 @@ export default function AuthDialog({ api, initialMode, onClose, onLogin }) {
     if (register) { payload.name = form.get('name'); payload.role = role; if (role === 'entreprise') payload.company_name = form.get('company_name'); }
     try {
       const data = await api(MODES[mode].path, { method: 'POST', body: payload });
-      if (mode === 'login') { sessionStorage.setItem(SESSION_TOKEN_KEY, data.token); onLogin(data.user); }
+      if (mode === 'login') { rememberUser(data.user); onLogin(data.user); }
       else {
         setNotice(data.message);
         setCooldown(Date.now() + 60000); setNow(Date.now());
@@ -65,6 +66,7 @@ export default function AuthDialog({ api, initialMode, onClose, onLogin }) {
         <button className="button button-dark auth-submit" disabled={busy || (!credentials && remaining > 0)}>{busy ? 'Un instant…' : !credentials && remaining > 0 ? `Nouvel envoi dans ${remaining} s` : MODES[mode].action}<span aria-hidden="true">→</span></button>
       </fieldset>
     </form>
+    {mode === 'login' && <p className="field-hint">Votre connexion reste active sur cet appareil pendant 7 jours. Sur un appareil partagé, déconnectez-vous après utilisation.</p>}
     {mode === 'login' && <GoogleSignIn onLogin={onLogin} />}
     {mode === 'login' && <div className="email-auth-options">
       {needsVerification && <button className="text-button" onClick={() => switchMode('verify')}>Renvoyer le lien de confirmation</button>}
