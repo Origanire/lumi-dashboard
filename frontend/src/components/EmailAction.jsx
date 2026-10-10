@@ -1,4 +1,4 @@
-import { SESSION_TOKEN_KEY } from '../config';
+import { rememberUser, clearSession } from '../session';
 import React, { useState } from 'react';
 
 export function readEmailAction() {
@@ -10,7 +10,7 @@ export function readEmailAction() {
 }
 const COPY = {
   verify: ['Confirmez votre adresse.', 'Cette vérification confirme que cette adresse e-mail vous appartient.', 'Confirmer mon adresse', '/auth/email/confirm'],
-  magic: ['Votre lien de connexion.', 'Ce lien ouvre le compte associé à l’e-mail reçu et remplace la session de cet onglet.', 'Me connecter', '/auth/magic/consume'],
+  magic: ['Votre lien de connexion.', 'Ce lien ouvre le compte associé à l’e-mail reçu et remplace la session Lumi de ce navigateur.', 'Me connecter', '/auth/magic/consume'],
   reset: ['Un nouveau mot de passe.', 'Après validation, les sessions existantes seront fermées sur tous vos appareils.', 'Enregistrer mon mot de passe', '/auth/password/reset'],
 };
 export default function EmailAction({ action, api, onLogin, onDone }) {
@@ -31,8 +31,8 @@ export default function EmailAction({ action, api, onLogin, onDone }) {
     setBusy(true);
     try {
       const data = await api(copy[3], { method: 'POST', body: payload });
-      if (action.purpose === 'magic') { sessionStorage.setItem(SESSION_TOKEN_KEY, data.token); onLogin(data.user); }
-      else { if (action.purpose === 'reset') sessionStorage.removeItem(SESSION_TOKEN_KEY); setSuccess(data.message); }
+      if (action.purpose === 'magic') { rememberUser(data.user); onLogin(data.user); }
+      else { if (action.purpose === 'reset') clearSession(true); setSuccess(data.message); }
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }
   }
