@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import api from '../api';
-import { SESSION_TOKEN_KEY } from '../config';
+import { rememberUser } from '../session';
 import { loadGoogleIdentity } from '../widgets/calendar/calendarClient';
 export default function GoogleSignIn({ onLogin, link = false }) {
   const target=useRef(null);
@@ -21,7 +21,7 @@ export default function GoogleSignIn({ onLogin, link = false }) {
           const data=await api(`/auth/google/${link?'link':'login'}`,{method:'POST',body:{credential:response.credential}});
           if (!live.current) return;
           if (link) setSuccess(true);
-          else {sessionStorage.setItem(SESSION_TOKEN_KEY,data.token);onLogin(data.user);}
+          else {rememberUser(data.user);onLogin(data.user);}
         } catch (err) {if(live.current){setError(err.message);setStarted(false);}}
       }});
       window.google.accounts.id.renderButton(target.current,{type:'standard',theme:'outline',size:'large',text:link?'continue_with':'signin_with'});
