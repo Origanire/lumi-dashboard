@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import AuthDialog from './components/AuthDialog';
 import EmailAction, { readEmailAction } from './components/EmailAction';
 import api from './api';
-import { SESSION_TOKEN_KEY } from './config';
+import { rememberUser, clearSession, isSessionChange } from './session';
 
 import Brand from './components/Brand';
 import AccessibilitySettings from './components/AccessibilitySettings';
@@ -18,24 +18,31 @@ export default function App() {
   const [authMode, setAuthMode] = useState(null);
   const [emailAction, setEmailAction] = useState(initialEmailAction);
   const [restoring, setRestoring] = useState(
-    !initialEmailAction && !!sessionStorage.getItem(SESSION_TOKEN_KEY),
+    !initialEmailAction,
   );
   const [sessionError, setSessionError] = useState('');
   async function restore() {
     setRestoring(true);
     setSessionError('');
     try {
-      setUser(await api('/auth/me'));
+      const restoredUser = await api('/auth/me');
+      rememberUser(restoredUser, false);
+      setUser(restoredUser);
     } catch (err) {
-      if (err.status === 401) sessionStorage.removeItem(SESSION_TOKEN_KEY);
+      if (err.status === 401) { clearSession(); setUser(null); }
       else setSessionError(err.message);
     } finally {
       setRestoring(false);
     }
   }
   useEffect(() => {
-    if (!initialEmailAction && sessionStorage.getItem(SESSION_TOKEN_KEY))
-      restore();
+    if (!initialEmailAction) restore();
+    const changed = event => {
+      if (!isSessionChange(event)) return;
+      clearGitHubSessions(); clearStoredAuth(); clearSession(); setUser(null); restore();
+    };
+    window.addEventListener('storage', changed);
+    return () => window.removeEventListener('storage', changed);
   }, []);
   async function logout() {
     if (
@@ -58,7 +65,7 @@ export default function App() {
     }
     clearGitHubSessions();
     clearStoredAuth();
-    sessionStorage.removeItem(SESSION_TOKEN_KEY);
+    clearSession(true);
     setUser(null);
     setSessionError('');
   }
@@ -73,7 +80,7 @@ export default function App() {
           setRestoring(false);
         }}
         onDone={(mode) => {
-          sessionStorage.removeItem(SESSION_TOKEN_KEY);
+          clearSession();
           setUser(null);
           setEmailAction(null);
           setRestoring(false);
