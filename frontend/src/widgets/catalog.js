@@ -1,4 +1,12 @@
 export const WIDGET_TYPES = {
+  habits: {
+    label: 'Habitudes · Suivi quotidien',
+    eyebrow: 'Petits pas, chaque jour',
+    icon: '✓',
+    color: 'mint',
+    defaultWidth: 12,
+    defaultHeight: 4,
+  },
   openai_chat: {
     label: 'Assistant IA local · Poser une question',
     eyebrow: 'Ollama',
@@ -98,6 +106,7 @@ export const WIDGET_TYPES = {
 };
 
 export const WIDGET_CONFIG_KEYS = {
+  habits: ['type', 'title', 'habits'],
   openai_chat: ['type', 'title'],
   github_pushes: ['type', 'title', 'githubRepo', 'githubLimit'],
   github_graph: ['type', 'title', 'githubRepo'],
