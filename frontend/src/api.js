@@ -1,14 +1,18 @@
-import { SESSION_TOKEN_KEY } from './config';
+import { legacyToken, accountId } from './session';
 
 export default async function api(path, { body, timeoutMs = 10000, ...options } = {}) {
-  const token = sessionStorage.getItem(SESSION_TOKEN_KEY);
+  const token = legacyToken();
+  const account = accountId();
   let response;
   try {
     response = await fetch(`/api${path}`, {
       ...options,
+      credentials: 'same-origin',
       signal: AbortSignal.timeout(timeoutMs),
       headers: {
         'Content-Type': 'application/json',
+        'X-Lumi-Client': 'web',
+        ...(account && !path.startsWith('/auth/') ? { 'X-Lumi-Account': account } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       ...(body ? { body: JSON.stringify(body) } : {}),
