@@ -15,7 +15,7 @@ const about = await response.json();
 assert.equal(typeof about.client.host, 'string');
 assert.ok(Number.isInteger(about.server.current_time));
 assert.equal(about.server.services.length, 7);
-assert.equal(about.server.services.flatMap(s => s.widgets).length, 12);
+assert.equal(about.server.services.flatMap(s => s.widgets).length, 13);
 const oversized = await fetch(new URL('/api/auth/register', base), {
   method: 'POST', headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ name: 'x'.repeat(1024 * 1024) }), signal: AbortSignal.timeout(15000),
@@ -27,5 +27,5 @@ const apiStatuses = await Promise.all(Array.from({ length: 60 }, async () => (aw
 assert.ok(apiStatuses.includes(200) && apiStatuses.includes(429));
 const authStatuses = await Promise.all(Array.from({ length: 15 }, async () => (await get('/api/auth/me')).status));
 assert.ok(authStatuses.includes(401) && authStatuses.includes(429));
-console.log(JSON.stringify({ frontend: 200, about: 200, services: 7, widgets: 12, oversized: 413,
+console.log(JSON.stringify({ frontend: 200, about: 200, services: 7, widgets: 13, oversized: 413,
   unauthenticated: 401, apiRateLimit: 429, authRateLimit: 429, weatherCsp: true, hiddenNginxVersion: true }));
