@@ -60,7 +60,7 @@ def validate(root, work):
                         assert response.status == 200
                         if path == '/about.json':
                             services = json.loads(data)['server']['services']
-                            assert sum(len(service['widgets']) for service in services) == 12
+                            assert sum(len(service['widgets']) for service in services) == 13
                         if path == '/dashboard':
                             assert "script-src 'self'" in response.headers['Content-Security-Policy']
                     break
