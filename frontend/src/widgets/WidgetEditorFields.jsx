@@ -2,6 +2,7 @@ import React from 'react';
 
 export default function WidgetEditorFields({ draft, update }) {
   const refreshing = ![
+    'habits',
     'openai_chat',
     'notes',
     'focus',
@@ -38,7 +39,19 @@ export default function WidgetEditorFields({ draft, update }) {
   );
 }
 function SpecificEditorFields({ draft, update }) {
-  if (draft.type === 'github_pushes' || draft.type === 'github_graph')
+  if (draft.type === 'habits') {
+    const habits = draft.habits || [];
+    return <div className="habits-editor">
+      <p>Une habitude par ligne, à retrouver chaque jour. Renommer une habitude conserve son historique.</p>
+      {habits.map((habit, index) => <div className="habits-editor-row" key={habit.id}>
+        <input aria-label={`Habitude ${index + 1}`} value={habit.name} maxLength={80} required onChange={event => update('habits', habits.map(item => item.id === habit.id ? { ...item, name: event.target.value } : item))} />
+        <button type="button" aria-label={`Retirer l’habitude ${index + 1}`} onClick={() => update('habits', habits.filter(item => item.id !== habit.id))}>Retirer</button>
+      </div>)}
+      <button type="button" disabled={habits.length >= 20} onClick={() => update('habits', [...habits, { id: crypto.randomUUID(), name: '', days: [] }])}>+ Ajouter une habitude</button>
+      <p className="field-hint">20 habitudes maximum. Retirer une ligne puis enregistrer supprime son historique ; Annuler conserve la version précédente.</p>
+    </div>;
+  }
+  if (draft.type === 'github_pushes'  || draft.type === 'github_graph')
     return (
       <>
         <label htmlFor="github-repo">Dépôt GitHub</label>
