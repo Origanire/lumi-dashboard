@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Brand from '../components/Brand';
 import Icon from '../components/Icon';
 import ThemeToggle from '../components/ThemeToggle';
-import Notifications from '../components/Notifications';
+import Notifications from '../../../bonus/frontend/Notifications';
 import WidgetDashboard from '../dashboard/WidgetDashboard';
 import { ROLE_LABELS } from '../config';
 import Account from './Account';
