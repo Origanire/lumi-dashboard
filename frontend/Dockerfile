@@ -4,6 +4,7 @@ COPY package.json package-lock.json ./
 COPY frontend/package.json frontend/package.json
 RUN npm ci
 COPY frontend/ frontend/
+COPY bonus/ bonus/
 ARG VITE_GOOGLE_CLIENT_ID
 ARG VITE_SPOTIFY_CLIENT_ID
 RUN npm run build -w frontend
