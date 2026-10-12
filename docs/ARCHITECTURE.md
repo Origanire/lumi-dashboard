@@ -42,7 +42,7 @@ Les prérequis des tests navigateur sont dans le [README](../README.md#tests-nav
 ## Livraison et preuves de soutenance
 
 - `docker-compose.yml` reste à la racine ; `deploy/nginx.conf` porte la CSP, les limites par IP, le plafond des corps et les délais proxy.
-- `BONUS.md` identifie les bonus à la racine ; `docs/BONUS.md` conserve un lien de compatibilité.
+- `bonus/` contient les modules additionnels autonomes ; `BONUS.md` identifie leurs raccordements ; `docs/BONUS.md` conserve un lien de compatibilité.
 - `poc/` contient une configuration partagée entre Front et Back, son test frontend et le protocole ; `scripts/poc.mjs` exécute `npm run poc`.
 - [CHOIX_TECHNOLOGIQUES.md](CHOIX_TECHNOLOGIQUES.md) compare trois solutions par couche ; [REMEDIATION_SOUTENANCE.md](REMEDIATION_SOUTENANCE.md) explique les modifications, leur impact, les menaces, les limites et les alternatives.
 - `frontend/src/styles/accessibility.css` est chargé en dernier pour préserver la lisibilité mobile et les préférences de lecture.
