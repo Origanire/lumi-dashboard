@@ -1,7 +1,7 @@
 import React from 'react';
 import GoogleSignIn from '../components/GoogleSignIn';
 import ServiceSubscriptions from '../components/ServiceSubscriptions';
-import AdminUsers from '../components/AdminUsers';
+import AdminUsers from '../../../bonus/frontend/AdminUsers';
 import { ROLE_LABELS } from '../config';
 
 export default function Account({ user, initials }) {
