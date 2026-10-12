@@ -1,3 +1,4 @@
+#[path = "../../bonus/backend/habits.rs"]
 pub mod habits;
 use axum::{
     Json, Router,
@@ -13,6 +14,7 @@ use utoipa::{
 use utoipa_swagger_ui::SwaggerUi;
 
 pub mod about;
+#[path = "../../bonus/backend/admin.rs"]
 pub mod admin;
 pub mod auth;
 mod calculator;
