@@ -1,6 +1,7 @@
 FROM rust:1.98-bookworm AS build
 WORKDIR /app
 COPY backend/ backend/
+COPY bonus/ bonus/
 RUN cargo build --locked --release --manifest-path backend/Cargo.toml
 
 FROM debian:bookworm-slim
