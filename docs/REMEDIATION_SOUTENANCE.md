@@ -1,6 +1,6 @@
 # Bilan des corrections après soutenance
 
-Date : 5 octobre 2026. Document de suivi des remarques du jury et des modifications du dépôt. Les changements améliorent les preuves disponibles ; l’attribution des points appartient au jury. Les fonctionnalités déjà présentes sont distinguées des nouveaux travaux.
+État actuel : 11 octobre 2026. Bilan initial établi le 5 octobre. Document de suivi des remarques du jury et des modifications du dépôt. Les changements améliorent les preuves disponibles ; l’attribution des points appartient au jury. Les fonctionnalités déjà présentes sont distinguées des nouveaux travaux.
 
 ## Correspondance avec la grille
 
@@ -8,9 +8,9 @@ Date : 5 octobre 2026. Document de suivi des remarques du jury et des modificati
 | --- | --- | --- |
 | Containerization & deployment — 2/2 | Compose conservé à la racine ; protections Nginx ajoutées | `docker-compose.yml`, `deploy/nginx.conf` ; port 8080 |
 | Service coverage — 3/3 | Météo fictive remplacée par Open-Meteo ; fournisseurs privés continuent à exiger une autorisation | `frontend/src/widgets/weather/weatherClient.js` ; deux villes et panne |
-| Widget implementation — 3/3 | Douze types conservés ; météo configurable par ville et intervalle, instances indépendantes | `frontend/tests/weather.test.mjs`, POC partagé |
+| Widget implementation — 3/3 | Treize types disponibles, dont le suivi des habitudes ; météo configurable par ville et intervalle, instances indépendantes | `frontend/tests/weather.test.mjs`, POC partagé |
 | Timer mechanism — 2/2 | Timers existants conservés ; météo actualisée de 300 à 3 600 s, 900 s par défaut | `useRefresh`, formulaire et validation Front/Back |
-| Repository structure — 1/1 | Front et back restent séparés ; bonus désormais documentés à la racine | `BONUS.md`, `docs/ARCHITECTURE.md` ; Compose reste à la racine |
+| Repository structure — 1/1 | Front et back restent séparés ; modules bonus autonomes regroupés dans `bonus/` à la racine | `BONUS.md`, `docs/ARCHITECTURE.md` ; Compose reste à la racine |
 | UI/UX design — 3/5 | Ajustements mobile, textes et formulaires plus lisibles ; réglages texte agrandi/contraste ; focus visible renforcé | `AccessibilitySettings.jsx`, `styles/accessibility.css`, tests 320/390/768 px |
 | About.json — 1/3 | Contrat existant confirmé, service météo identifié, description fictive supprimée, intervalle ajouté | `backend/src/about.rs`, `backend/tests/about.rs`, `GET :8080/about.json` |
 | Dashboard management — 6/6 | Sauvegarde, import/export et instances préservés ; deux météos testées en PostgreSQL | `backend/tests/workspace.rs`, `poc/dashboard.json` |
@@ -60,16 +60,16 @@ Les limites par IP s’appliquent au chemin Docker/Nginx. En développement, l�
 | --- | --- | --- |
 | Compte, adresse, nom, rôles, associations d’entreprise | PostgreSQL ; jusqu’à suppression administrative | Identité personnelle ; autorisation serveur, requêtes paramétrées, aucune conservation automatique bornée actuellement |
 | Mot de passe | Hachage bcrypt en PostgreSQL | Ne pas exposer la base ; coût du hachage n’empêche pas un mot de passe faible |
-| Session Lumi | Jeton brut en `sessionStorage` ; hachage en base ; validité serveur 7 jours | Fermeture de l’onglet ou déconnexion retire le jeton navigateur ; déconnexion révoque la session ; XSS reste un risque |
-| Dashboards, notes, configuration | PostgreSQL, volume Docker ; jusqu’à suppression du dashboard/compte | Persistance entre appareils ; export et suppression d’un dashboard disponibles ; sauvegarde externe à prévoir |
+| Session Lumi | Cookie HttpOnly, SameSite=Lax, Path=/api, Secure en HTTPS ; hachage en base ; validité fixe de 7 jours | Fermeture du navigateur ou redémarrage serveur ne déconnecte pas ; expiration, suppression des cookies ou révocation déconnectent ; XSS reste un risque |
+| Dashboards, notes, habitudes, configuration | PostgreSQL, volume Docker ; jusqu’à suppression du dashboard/compte | Persistance entre appareils ; export et suppression d’un dashboard disponibles ; sauvegarde externe à prévoir |
 | Jetons Google/Spotify/GitHub | Mémoire navigateur ; matériel PKCE temporaire en `sessionStorage` | Rechargement/déconnexion nécessitent une reconnexion ; la révocation fournisseur est distincte |
 | Thème et confort de lecture | `localStorage`, jusqu’à effacement navigateur | Préférences locales ; ne contiennent pas de jeton fournisseur |
-| Conversation IA | Saisie/réponse en mémoire ; prompt transmis lors de l’envoi | Aucun historique Lumi en base ; la politique du fournisseur s’applique aussi ; ne pas confondre `store: false` avec absence de tout journal fournisseur |
+| Conversation IA | Saisie/réponse en mémoire ; prompt transmis lors de l’envoi | Aucun historique Lumi en base ; inférence sur Ollama local, sans appel OpenAI ; journaux et accès à la machine restent à encadrer |
 | Météo | Ville/intervalle en base ; réponse en mémoire | Open-Meteo reçoit ville, coordonnées et IP du navigateur ; pas de géolocalisation automatique |
 | Journaux HTTP | JSON sur stdout ; rétention dépend de l’exploitation Docker | Pas de corps ni de jeton dans le logger applicatif ; Nginx a ses propres journaux d’accès à encadrer |
 | Liens e-mail et nonce OIDC | Hachages en base avec expiration ; consommation à usage unique | Expiration empêche l’utilisation ; nettoyage physique et sauvegardes à gérer séparément |
 
-**Décision** : conserver le stockage serveur des dashboards est nécessaire à la restauration après connexion. Limiter les jetons fournisseurs à la mémoire réduit leur persistance, au prix d’une reconnexion. Ajouter un cookie uniquement pour satisfaire une remarque n’apporterait pas une preuve de protection ; une session HttpOnly est une alternative argumentée ci-dessous. La suppression du compte, la politique de sauvegarde et la rétention globale doivent être définies par l’exploitant avant un usage public. Elles ne sont pas déclarées implémentées.
+**Décision** : conserver le stockage serveur des dashboards est nécessaire à la restauration après connexion. Limiter les jetons fournisseurs à la mémoire réduit leur persistance, au prix d’une reconnexion. Le cookie HttpOnly fournit désormais une reconnexion automatique jusqu’à expiration, avec une protection des mutations par en-tête client et contrôle de provenance. Le marqueur sessionStorage ne permet pas de s’authentifier. La suppression du compte, la politique de sauvegarde et la rétention globale doivent être définies par l’exploitant avant un usage public. Elles ne sont pas déclarées implémentées.
 
 ## Analyse des menaces
 
@@ -80,12 +80,12 @@ Périmètre : navigateur, Nginx, API, PostgreSQL, SMTP, fournisseurs OAuth/IA/m�
 | Usurpation et brute force | Vérification e-mail, bcrypt, sessions expirantes ; limites e-mail existantes, limite IP Nginx ajoutée | Identifiants volés ; proposer MFA et alertes ; ne pas exposer le compte de démonstration en public |
 | Accès au dashboard d’un autre utilisateur / escalade de rôle | Propriétaire extrait de la session ; contrôle admin ; inscription admin interdite ; tests d’isolation | Revoir chaque nouvelle route ; comptes administrateurs protégés séparément |
 | Injection SQL / paramètres malveillants | Requêtes paramétrées, validation des widgets et types, champs inconnus refusés | Une future requête SQL construite par interpolation pourrait rouvrir le risque |
-| XSS et vol du jeton d’onglet | Échappement React, CSP, jetons externes en mémoire, absence de scripts arbitraires | `sessionStorage` reste lisible par JavaScript ; envisager cookie HttpOnly + protection CSRF ; auditer dépendances |
-| CSRF / OAuth détourné / rejeu | Bearer explicite ; PKCE Spotify ; nonce OIDC expirant à usage unique, vérification signature/audience/issuer | Une migration aux cookies demande une protection CSRF ; tester le vrai consentement fournisseur |
+| XSS et abus de session | Échappement React, CSP, jetons externes en mémoire, absence de scripts arbitraires | Le cookie Lumi est HttpOnly ; un XSS peut encore agir au nom du compte et lire les données affichées ; auditer les dépendances |
+| CSRF / OAuth détourné / rejeu | Cookie + X-Lumi-Client et contrôle Fetch Metadata ; Bearer pour clients API ; PKCE Spotify ; nonce OIDC à usage unique, signature/audience/issuer | Tests CSRF présents ; tester aussi le vrai consentement fournisseur |
 | Corps énormes / saturation / coût IA | Nouveau plafond 1 Mio et quotas Nginx ; limites par utilisateur pour l’IA ; pool SQL borné ; timers | DDoS distribué, réponse fournisseur lente ; proxy public/WAF, budgets et supervision nécessaires |
 | SSRF / fuite vers une URL arbitraire | Hôtes fixes météo/IA et clients fournisseurs restreints ; jetons exclus des exports | Revoir toute future URL configurable ; filtrer les sorties réseau en production |
 | Perte ou écrasement de données | Volume PostgreSQL, migrations, contrôle de révision, export ; tests de conflit | Volume détruit ou serveur perdu ; sauvegarde chiffrée et restauration testée restent à organiser |
-| Divulgation de secrets / logs | `.env` exclu, clé IA serveur, mots de passe/tokens hachés, logger sans corps | Fichier .env, accès Docker et logs proxy sensibles ; permissions, rotation et rétention à définir |
+| Divulgation de secrets / logs | `.env` exclu, IA locale sans clé, mots de passe/tokens hachés, logger sans corps | Fichier .env, accès Docker et logs proxy sensibles ; permissions, rotation et rétention à définir |
 | Altération réseau / interception | Appels fournisseurs HTTPS ; services locaux liés à loopback | Entrée Lumi en HTTP local ; terminaison TLS nécessaire pour déploiement public |
 | Panne fournisseur / révocation / quota | États d’erreur, réessai, polling borné ; aucune météo fictive en secours | Dépendance externe ; prévoir cache identifié comme ancien, suivi des quotas et mode dégradé |
 | Supply chain et images compromises | Lockfiles, séparation des couches, tests reproductibles | Pas d’audit exhaustif ici ; proposer scan de dépendances/images et mises à jour contrôlées |
@@ -98,7 +98,7 @@ Périmètre : navigateur, Nginx, API, PostgreSQL, SMTP, fournisseurs OAuth/IA/m�
 | --- | --- | --- |
 | Google/Spotify exigent une connexion fournisseur | Les données privées demandent un consentement ; aucun faux contenu ne peut remplacer une boîte mail réelle | Fournir un mode démonstration clairement identifié pour une soutenance hors ligne |
 | Reconnexion fournisseur après rechargement | Limite la persistance des jetons ; moins pratique mais réduit leur exposition durable | BFF et refresh tokens chiffrés côté serveur si la continuité devient prioritaire ; nécessite rotation/révocation |
-| Session Lumi en sessionStorage | Architecture Bearer existante, simple pour API et onglet ; sensible à XSS | Cookie Secure/HttpOnly/SameSite avec CSRF et TLS pour un déploiement public |
+| Session Lumi fixe de sept jours | Cookie HttpOnly et session révocable en PostgreSQL ; pas de prolongation indéfinie | Réauthentification des actions sensibles et MFA si le périmètre public l’exige |
 | Météo par recherche de ville, premier résultat | Intégration légère sans clé ; affichage de la localisation et pays pour vérifier le choix | Sélecteur de résultats/coordonnées si les homonymes deviennent fréquents ; cache serveur pour mutualiser les appels |
 | Gratuité et disponibilité météo dépendantes du fournisseur | Convient à une démonstration étudiante non commerciale ; pas de SLA promis | Offre commerciale ou autre fournisseur si exploitation payante/quotas élevés ; vérifier les conditions avant publication |
 | Pas de collaboration instantanée | Révisions et rechargement limitent la complexité et protègent des écrasements | WebSocket/SSE et stratégie de fusion si édition simultanée nécessaire |
@@ -110,9 +110,13 @@ Périmètre : navigateur, Nginx, API, PostgreSQL, SMTP, fournisseurs OAuth/IA/m�
 
 Les alternatives de technologies et leurs impacts sont détaillés dans [CHOIX_TECHNOLOGIQUES.md](CHOIX_TECHNOLOGIQUES.md). Elles sont proposées sans prétendre avoir été implémentées.
 
+## Abonnements et compatibilité
+
+Le dashboard initial ne contient plus de Calendar sans activation. Les créations, imports et ajouts par API vérifient les abonnements. Après désactivation, les instances existantes sont conservées, éditables et supprimables mais leur contenu fournisseur est démonté dans l’interface. Les sauvegardes et les changements d’abonnement sont sérialisés par compte. L’activation Lumi ne remplace jamais le consentement OAuth du fournisseur. Les anciens widgets non activés du stockage local restent récupérables dans ce stockage mais ne sont pas automatiquement importés.
+
 ## Vérifications et soutenance
 
-Les résultats effectivement exécutés sont consignés dans [VALIDATION_REMEDIATION.md](VALIDATION_REMEDIATION.md). Pour rejouer les preuves :
+Les résultats actuels sont consignés dans [VERIFICATION_2026-10-11.md](VERIFICATION_2026-10-11.md) ; [VALIDATION_REMEDIATION.md](VALIDATION_REMEDIATION.md) conserve les essais historiques. Pour rejouer les preuves :
 
 ```bash
 npm run services
@@ -128,7 +132,11 @@ Préparer la base navigateur et Chromium selon le README. Pour la démonstration
 
 Les essais OAuth avec des comptes réels, la qualité des réponses du modèle local et l’audit complet de sécurité/accessibilité restent des validations séparées. Aucun point supplémentaire n’est garanti par ce document.
 
-## Complément : doublons et majuscules/minuscules
+## Historique des travaux antérieurs
+
+Les compléments suivants retracent les changements successifs ; les tableaux ci-dessus décrivent l’état actuel. Les essais SMTP via Mailpit concernent la recette, pas le SMTP Gmail du développement courant.
+
+### Doublons et majuscules/minuscules
 
 La création et la modification comparent désormais les textes sans tenir compte de la casse ni des espaces au début/à la fin : titre, contenu des notes, ville, dépôt GitHub et adresse Gmail. La casse saisie reste conservée pour l’affichage. Les identifiants clients OAuth restent sensibles à la casse. La vérification exclut le widget en cours de modification et distingue toujours les configurations réellement différentes (par exemple deux villes). Les intervalles sans effet sur les widgets locaux ne créent plus une différence artificielle ; les valeurs de rafraîchissement implicites sont comparées à leur défaut effectif.
 
