@@ -1,4 +1,4 @@
-import { cleanHabits } from './widgets/habits/habitModel.js';
+import { cleanHabits } from '../../bonus/frontend/habits/habitModel.js';
 const common = ['id', 'type', 'title', 'x', 'y', 'width', 'height', 'refreshInterval'];
 const fields = {
   habits: ['habits'],
