@@ -4,7 +4,7 @@ Projet de tableau de bord réalisé dans le cadre du module G-WEB-500.
 
 ## Présentation
 
-L'application propose des dashboards personnalisables, sauvegardés dans le compte utilisateur, avec cinq intégrations externes (GitHub, Spotify, Gmail, Google Calendar et Open-Meteo), un assistant IA local Ollama et deux outils locaux.
+L'application propose des dashboards personnalisables, sauvegardés dans le compte utilisateur, avec cinq intégrations externes (GitHub, Spotify, Gmail, Google Calendar et Open-Meteo), un assistant IA local Ollama et trois outils locaux.
 
 Lumi rassemble des notes, un minuteur de concentration et des widgets dans un tableau de bord personnalisable. L’interface React communique avec une API Rust pour les comptes et les sessions.
 
@@ -167,11 +167,12 @@ Tous les widgets possèdent un titre et une taille configurables.
 | Gmail | Rédiger | Client ID, compte indicatif | Envoi explicite depuis Lumi |
 | Google Calendar | Échéances du mois | Titre, intervalle 30–3600 s | Agenda principal connecté |
 | Google Calendar | Planning semaine/jour | Titre, intervalle 30–3600 s | Agenda principal connecté |
+| Local | Habitudes | Noms des habitudes, titre, taille | Grille hebdomadaire, cases quotidiennes, séries et historique persistant |
 | Local | Notes | Contenu | Sauvegardé dans le compte avec le dashboard |
 | Local | Focus | Durée 5–120 minutes | Minuteur local |
 | Open-Meteo | Météo | Ville, intervalle | Conditions actuelles, sans compte fournisseur ; [guide](docs/integrations/weather.md) |
 
-Voir les guides [Calendar](docs/integrations/google-calendar.md) , [Gmail](docs/integrations/gmail.md) et [GitHub](docs/integrations/github.md). Les autorisations externes nécessitent une configuration fournisseur ; leur présence dans le catalogue ne prouve pas une validation de bout en bout. Le catalogue machine est disponible publiquement sur `/about.json`, avec l’IP du client, l’heure Unix et les paramètres de type `integer` ou `string`. Le groupe `local` y identifie Notes et Focus ; le service `weather` identifie les conditions Open-Meteo.
+Voir les guides [Calendar](docs/integrations/google-calendar.md) , [Gmail](docs/integrations/gmail.md) et [GitHub](docs/integrations/github.md). Les autorisations externes nécessitent une configuration fournisseur ; leur présence dans le catalogue ne prouve pas une validation de bout en bout. Le catalogue machine est disponible publiquement sur `/about.json`, avec l’IP du client, l’heure Unix et les paramètres de type `integer` ou `string`. Le groupe `local` y identifie Notes, Focus et Habitudes ; le service `weather` identifie les conditions Open-Meteo.
 
 ## Architecture
 
@@ -277,3 +278,18 @@ APP_URL=http://127.0.0.1:5174
 Arrêter le processus `npm run dev` existant avec Ctrl+C, puis le relancer pour recharger `.env`. Créer un nouveau compte Lumi avec une adresse réelle ou demander le renvoi de confirmation (une minute minimum entre deux demandes). Les comptes de test initialisés sont déjà confirmés. Les anciens messages Mailpit ne sont pas réexpédiés.
 
 Les liens utilisant `127.0.0.1` doivent être ouverts sur l’ordinateur où Lumi tourne. Pour des destinataires sur d’autres appareils, configurer une origine HTTPS accessible. La stack Docker conserve sa configuration Mailpit propre : cette procédure concerne `npm run dev`.
+
+
+## Habitudes et connexion persistante
+
+Dans **Ajouter un widget**, choisir **Habitudes · Suivi quotidien**. Définir jusqu’à 20 habitudes, puis cocher les jours accomplis dans la grille hebdomadaire. Les flèches permettent de consulter les semaines précédentes ; les jours futurs sont désactivés. Le widget affiche la progression sur les jours écoulés et la série actuelle de chaque habitude. Modifier un nom conserve son historique ; retirer une ligne puis enregistrer supprime cet historique. Les données sont sauvegardées avec le dashboard dans PostgreSQL et conservées dans les exports JSON.
+
+La connexion à **Lumi** est maintenant conservée pendant **sept jours à partir de la connexion**, même après fermeture du navigateur ou redémarrage du serveur. Le cookie de session est `HttpOnly`, `SameSite=Lax`, et `Secure` lorsque `APP_URL` utilise HTTPS. Le bouton **Se déconnecter** révoque la session et efface le cookie. Les sessions existantes en mémoire d’onglet sont migrées lors de leur restauration, sans prolonger leur expiration.
+
+Utiliser la même adresse à chaque ouverture : `localhost` et `127.0.0.1` ne partagent pas leurs cookies. Conserver le volume PostgreSQL et les cookies du navigateur. Cette persistance concerne Lumi ; les connexions aux fournisseurs Google, Spotify et GitHub gardent leur fonctionnement temporaire actuel.
+
+Validation actualisée le 11 octobre : 48 tests frontend, 39 tests Rust et 18 parcours navigateur réussis ; scénario vidéo ignoré par défaut. Le parcours navigateur vérifie les habitudes après rechargement et renommage, ainsi qu’une réouverture avec uniquement les cookies, sans restauration de `sessionStorage` ou `localStorage`. Les tests Rust vérifient la même session avec une nouvelle instance du serveur, son expiration, sa révocation et le rejet des mutations par cookie sans l’en-tête client attendu.
+
+### Conformité après soutenance
+
+Les nouvelles instances et imports de services nécessitent une activation côté serveur. Désactiver un service conserve ses widgets en pause. Les bonus autonomes sont regroupés dans `bonus/` ; voir [le périmètre](BONUS.md), [le bilan](docs/REMEDIATION_SOUTENANCE.md) et [les preuves du 11 octobre](docs/VERIFICATION_2026-10-11.md).
