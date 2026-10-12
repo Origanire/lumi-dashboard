@@ -449,3 +449,69 @@ async fn habits_history_is_validated_persisted_and_private(pool: PgPool) {
         );
     }
 }
+
+#[sqlx::test]
+async fn subscriptions_guard_new_instances_but_preserve_paused_widgets(pool: PgPool) {
+    let app = lumi_backend::app(pool.clone());
+    let (token, _) = account(&pool, &app, "subscription-guard@test.local").await;
+    let widget =
+        json!({"id":"calendar","type":"agenda","title":"Agenda","x":1,"y":1,"width":6,"height":2});
+    let body = json!({"name":"Services","widgets":[widget.clone()]});
+    assert_eq!(
+        request(&app, "POST", "/api/dashboards", &token, body.clone())
+            .await
+            .0,
+        403
+    );
+    assert_eq!(
+        request(
+            &app,
+            "PUT",
+            "/api/services/google_calendar",
+            &token,
+            Value::Null
+        )
+        .await
+        .0,
+        204
+    );
+    let (status, board) = request(&app, "POST", "/api/dashboards", &token, body.clone()).await;
+    assert_eq!(status, 201);
+    assert_eq!(
+        request(
+            &app,
+            "DELETE",
+            "/api/services/google_calendar",
+            &token,
+            Value::Null
+        )
+        .await
+        .0,
+        204
+    );
+    let path = format!("/api/dashboards/{}", board["id"].as_str().unwrap());
+    let mut edit = body.clone();
+    edit["revision"] = json!(0);
+    // Saving a dormant existing instance remains possible; no data is deleted.
+    assert_eq!(
+        request(&app, "PUT", &path, &token, edit.clone()).await.0,
+        200
+    );
+    edit["revision"] = json!(1);
+    let mut additional = widget.clone();
+    additional["id"] = json!("second");
+    edit["widgets"].as_array_mut().unwrap().push(additional);
+    assert_eq!(
+        request(&app, "PUT", &path, &token, edit.clone()).await.0,
+        403
+    );
+    // Importing into another dashboard is a new instance, even with the same ID.
+    assert_eq!(
+        request(&app, "POST", "/api/dashboards", &token, body)
+            .await
+            .0,
+        403
+    );
+    edit["widgets"] = json!([]);
+    assert_eq!(request(&app, "PUT", &path, &token, edit).await.0, 200);
+}
