@@ -174,6 +174,42 @@ fn validate(input: &DashboardInput) -> Result<(), ApiError> {
     }
     Ok(())
 }
+// Existing instances remain stored when a service is disabled; the UI pauses them.
+// New instances (including imports and type changes) require an active subscription.
+async fn validate_subscriptions(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    user_id: Uuid,
+    widgets: &Value,
+    previous: &Value,
+) -> Result<(), ApiError> {
+    let active: Vec<String> =
+        sqlx::query_scalar("SELECT service FROM service_subscriptions WHERE user_id=$1")
+            .bind(user_id)
+            .fetch_all(&mut **tx)
+            .await?;
+    for widget in widgets.as_array().into_iter().flatten() {
+        let service = match widget["type"].as_str().unwrap_or("") {
+            "agenda" | "calendar_week" => "google_calendar",
+            "gmail_unread" | "gmail_compose" => "gmail",
+            "spotify_player" | "spotify_top" => "spotify",
+            "github_pushes" | "github_graph" => "github",
+            "openai_chat" => "openai",
+            _ => continue,
+        };
+        let existing = previous
+            .as_array()
+            .into_iter()
+            .flatten()
+            .any(|old| old["id"] == widget["id"] && old["type"] == widget["type"]);
+        if !existing && !active.iter().any(|s| s == service) {
+            return Err(ApiError(
+                StatusCode::FORBIDDEN,
+                "Activez le service dans Mes services avant d’ajouter ou d’importer ses widgets.",
+            ));
+        }
+    }
+    Ok(())
+}
 #[utoipa::path(get, path = "/api/dashboards", responses((status = 200, description = "Succès"), (status = 400, description = "Paramètres invalides"), (status = 401, description = "Authentification requise")))]
 pub async fn list(
     user: AuthUser,
@@ -193,6 +229,7 @@ pub async fn create(
         .bind(user.id)
         .execute(&mut *tx)
         .await?;
+    validate_subscriptions(&mut tx, user.id, &input.widgets, &Value::Null).await?;
     let count: i64 = sqlx::query_scalar("SELECT count(*) FROM user_dashboards WHERE user_id=$1")
         .bind(user.id)
         .fetch_one(&mut *tx)
@@ -215,7 +252,26 @@ pub async fn update(
     let revision = input
         .revision
         .ok_or(ApiError::invalid("Version de sauvegarde requise."))?;
-    let item = sqlx::query_as("UPDATE user_dashboards SET name=$3,widgets=$4,revision=revision+1 WHERE id=$1 AND user_id=$2 AND revision=$5 RETURNING id,name,widgets,revision").bind(id).bind(user.id).bind(input.name.trim()).bind(input.widgets).bind(revision).fetch_optional(&state.pool).await?;
+    let mut tx = state.pool.begin().await?;
+    sqlx::query("SELECT id FROM users WHERE id=$1 FOR UPDATE")
+        .bind(user.id)
+        .execute(&mut *tx)
+        .await?;
+    let previous: Option<Value> =
+        sqlx::query_scalar("SELECT widgets FROM user_dashboards WHERE id=$1 AND user_id=$2")
+            .bind(id)
+            .bind(user.id)
+            .fetch_optional(&mut *tx)
+            .await?;
+    validate_subscriptions(
+        &mut tx,
+        user.id,
+        &input.widgets,
+        &previous.unwrap_or(Value::Null),
+    )
+    .await?;
+    let item = sqlx::query_as("UPDATE user_dashboards SET name=$3,widgets=$4,revision=revision+1 WHERE id=$1 AND user_id=$2 AND revision=$5 RETURNING id,name,widgets,revision").bind(id).bind(user.id).bind(input.name.trim()).bind(input.widgets).bind(revision).fetch_optional(&mut *tx).await?;
+    tx.commit().await?;
     item.map(Json).ok_or(ApiError(
         StatusCode::CONFLICT,
         "Dashboard modifié ailleurs ou inaccessible. Rechargez la sauvegarde avant de réessayer.",
@@ -257,13 +313,19 @@ pub async fn subscribe(
     if !["spotify", "gmail", "google_calendar", "github", "openai"].contains(&service.as_str()) {
         return Err(ApiError::invalid("Service inconnu."));
     }
+    let mut tx = state.pool.begin().await?;
+    sqlx::query("SELECT id FROM users WHERE id=$1 FOR UPDATE")
+        .bind(user.id)
+        .execute(&mut *tx)
+        .await?;
     sqlx::query(
         "INSERT INTO service_subscriptions(user_id,service) VALUES($1,$2) ON CONFLICT DO NOTHING",
     )
     .bind(user.id)
     .bind(service)
-    .execute(&state.pool)
+    .execute(&mut *tx)
     .await?;
+    tx.commit().await?;
     Ok(StatusCode::NO_CONTENT)
 }
 #[utoipa::path(delete, path = "/api/services/{service}", params(("service" = String, Path, description = "Service")), responses((status = 200, description = "Succès"), (status = 400, description = "Paramètres invalides"), (status = 401, description = "Authentification requise")))]
@@ -272,10 +334,16 @@ pub async fn unsubscribe(
     State(state): State<AppState>,
     Path(service): Path<String>,
 ) -> Result<StatusCode, ApiError> {
+    let mut tx = state.pool.begin().await?;
+    sqlx::query("SELECT id FROM users WHERE id=$1 FOR UPDATE")
+        .bind(user.id)
+        .execute(&mut *tx)
+        .await?;
     sqlx::query("DELETE FROM service_subscriptions WHERE user_id=$1 AND service=$2")
         .bind(user.id)
         .bind(service)
-        .execute(&state.pool)
+        .execute(&mut *tx)
         .await?;
+    tx.commit().await?;
     Ok(StatusCode::NO_CONTENT)
 }
