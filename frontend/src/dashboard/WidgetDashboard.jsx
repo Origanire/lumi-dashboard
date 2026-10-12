@@ -1,3 +1,4 @@
+import Subscriptions from './Subscriptions';
 import React from 'react';
 import CalendarProvider from '../widgets/calendar/CalendarProvider';
 import DashboardWorkspace from '../components/DashboardWorkspace';
@@ -6,7 +7,7 @@ import { INITIAL_WIDGETS } from './defaultWidgets';
 
 export default function WidgetDashboard({ userId }) {
   return (
-    <CalendarProvider key={userId}>
+    <Subscriptions key={userId}><CalendarProvider>
       <DashboardWorkspace userId={userId} initialWidgets={INITIAL_WIDGETS}>
         {({ key, widgets, onChange }) => (
           <DashboardWidgets
@@ -17,6 +18,6 @@ export default function WidgetDashboard({ userId }) {
           />
         )}
       </DashboardWorkspace>
-    </CalendarProvider>
+    </CalendarProvider></Subscriptions>
   );
 }
