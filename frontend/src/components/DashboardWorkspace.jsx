@@ -1,4 +1,5 @@
-import { notify } from './Notifications';
+import { widgetService } from '../dashboard/Subscriptions';
+import { notify } from '../../../bonus/frontend/Notifications';
 import React, { useEffect, useRef, useState } from 'react';
 import api from '../api';
 import { cleanWidgets, exportDashboard, parseDashboardExport } from '../dashboardModel';
@@ -29,6 +30,8 @@ export default function DashboardWorkspace({ userId, initialWidgets, children })
       if (!items.length) {
         let widgets = initialWidgets;
         try { const local = localStorage.getItem(`lumi_dashboard_v1_${userId}`); if (local) widgets = cleanWidgets(JSON.parse(local)); } catch { /* Preserve invalid legacy storage for manual recovery. */ }
+        const active = await api('/services');
+        widgets = widgets.filter(widget => !widgetService(widget.type) || active.includes(widgetService(widget.type)));
         items = [await api('/dashboards', { method: 'POST', body: { name: 'Mon dashboard', widgets: cleanWidgets(widgets) } })];
       }
       if (!alive.current) return;
