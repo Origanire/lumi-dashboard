@@ -1,19 +1,15 @@
-# Bonus et fichiers associés
+# Bonus et périmètre de livraison
 
-Les fonctionnalités sont intégrées à l’application ; ce document identifie leurs sources pour la livraison.
+Les modules additionnels autonomes sont regroupés dans [`bonus/`](bonus/README.md), à la racine du dépôt. Ils sont compilés avec l’application ; leurs points de raccordement restent dans le catalogue, les routes et la validation partagée.
 
-| Bonus | Sources principales | Périmètre |
-| --- | --- | --- |
-| Connexion Google OIDC | `backend/src/google_auth.rs`, `frontend/src/components/GoogleSignIn.jsx` | Signature, audience, émetteur, expiration et nonce ; consentement réel à valider |
-| Thèmes | `frontend/src/components/ThemeToggle.jsx`, `frontend/public/theme-init.js`, `frontend/src/styles/theme.css` | Clair/sombre et préférence locale |
-| Glisser-déposer, redimensionnement | `frontend/src/dashboard/DashboardWidgets.jsx` | Grille desktop ; commandes clavier/toucher |
-| Dashboards multiples, import/export | `frontend/src/components/DashboardWorkspace.jsx`, `frontend/src/dashboardModel.js`, `backend/src/workspace.rs` | Stockage PostgreSQL, versions, format JSON validé |
-| Notifications | `frontend/src/components/Notifications.jsx`, `frontend/src/widgets/FocusWidget.jsx` | Vingt messages au maximum par session |
-| Recherche | `frontend/src/dashboard/WidgetEditor.jsx`, `frontend/src/components/ServiceSubscriptions.jsx` | Filtrage des widgets et services |
-| Cache et quotas | `frontend/src/widgets/github/githubCache.js`, `githubClient.js`, `frontend/src/hooks/useRefresh.js` | Cache GitHub mémoire, pause après quota, polling visible et borné |
-| Historique | `frontend/src/widgets/github/GitHubWidget.jsx` | 24 observations du nombre d’éléments chargés, en session |
-| Administration | `backend/src/admin.rs`, `frontend/src/components/AdminUsers.jsx` | Recherche, rôles, révocation des sessions, contrôle serveur |
-| Mobile | `frontend/src/styles/responsive.css`, `frontend/src/dashboard/DashboardWidgets.jsx` | Colonne mobile et déplacement tactile/clavier |
-| Accessibilité | `frontend/src/components/AccessibilitySettings.jsx`, `frontend/src/styles/accessibility.css` | Texte agrandi et contraste renforcé |
+| Bonus autonome | Sources |
+| --- | --- |
+| Suivi des habitudes, historique et séries | `bonus/frontend/habits/`, `bonus/backend/habits.rs` |
+| Administration des comptes, rôles et révocation des sessions | `bonus/frontend/AdminUsers.jsx`, `bonus/backend/admin.rs` |
+| Centre de notifications de la session | `bonus/frontend/Notifications.jsx` |
 
-Les répertoires `node_modules`, `target`, `dist`, les rapports Playwright et les fichiers `.env` sont exclus par `.gitignore`. La clé RSA dans `backend/tests/fixtures` est une clé publique de test au sens de sa divulgation : sa partie privée est volontairement fournie pour signer des jetons de test, et n’a aucun usage de production.
+La connexion à un fournisseur d’identité, le déplacement des widgets, le responsive et l’accessibilité répondent au sujet : ils ne sont pas présentés comme des bonus. Les thèmes, la recherche, les dashboards multiples, l’import/export et les caches sont des améliorations intégrées au socle commun. Ils restent dans les composants partagés ; cette organisation ne prétend pas isoler chaque amélioration de confort dans un paquet indépendant.
+
+Les tests d’intégration restent dans les suites communes pour vérifier l’application complète. Les Dockerfiles copient `bonus/` explicitement ; les imports Vite et les chemins de modules Rust pointent vers ces sources uniques.
+
+`node_modules`, `target`, `dist`, les rapports de tests et `.env` sont exclus de Git. Les clés de `backend/tests/fixtures` servent uniquement à signer/vérifier des jetons de test, jamais en production.
