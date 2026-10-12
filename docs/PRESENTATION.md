@@ -6,7 +6,7 @@ Milo Bousquet et Nathan Muzay ont travaillé ensemble sur la conception, le fron
 
 « Lumi réunit des informations et des outils dans plusieurs dashboards personnalisables. Chaque utilisateur choisit ses services, configure ses widgets et retrouve ses dashboards après reconnexion. »
 
-L’équipe compte deux personnes. Le seuil du sujet est de trois services et six widgets. Le catalogue contient douze types de widgets, dont une météo Open-Meteo réelle sans compte fournisseur. Notes et Focus sont locaux ; les données privées des autres fournisseurs nécessitent un consentement.
+L’équipe compte deux personnes. Le seuil du sujet est de trois services et six widgets. Le catalogue contient treize types de widgets, dont une météo Open-Meteo réelle sans compte fournisseur. Notes, Focus et Habitudes sont locaux ; les données privées des autres fournisseurs nécessitent un consentement.
 
 ## 2. Le parcours utilisateur — 2 minutes
 
