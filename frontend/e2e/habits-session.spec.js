@@ -77,3 +77,33 @@ test('Lumi session survives closing the browser context without copying web stor
     await second?.close();
   }
 });
+
+test('disabled services pause stored widgets without deleting their configuration', async ({ page }) => {
+  await login(page);
+  const headers = { 'X-Lumi-Client': 'web' };
+  const before = await (await page.request.get('/api/services')).json();
+  let boardId;
+  try {
+    await page.request.put('/api/services/google_calendar', { headers });
+    const response = await page.request.post('/api/dashboards', { headers, data: { name: `E2E pause ${Date.now()}`, widgets: [{ id: 'calendar', type: 'agenda', title: 'Agenda conservé', x: 1, y: 1, width: 6, height: 2 }] } });
+    expect(response.status()).toBe(201);
+    boardId = (await response.json()).id;
+    await page.request.delete('/api/services/google_calendar', { headers });
+    await page.reload();
+    await page.getByLabel('Dashboard actif').selectOption(boardId);
+    const card = page.locator('article').filter({ has: page.getByRole('heading', { name: 'Agenda conservé', exact: true }) });
+    await expect(card.getByText(/Service désactivé/)).toBeVisible();
+    await page.request.put('/api/services/google_calendar', { headers });
+    await page.evaluate(() => window.dispatchEvent(new Event('lumi:subscriptions-changed')));
+    await expect(card.getByText(/Service désactivé/)).toHaveCount(0);
+    await expect(card.getByText(/Chargement du service/)).toHaveCount(0);
+    await page.request.delete('/api/services/google_calendar', { headers });
+    await page.evaluate(() => window.dispatchEvent(new Event('lumi:subscriptions-changed')));
+    await expect(card.getByText(/Service désactivé/)).toBeVisible();
+    const boards = await (await page.request.get('/api/dashboards')).json();
+    expect(boards.find(b => b.id === boardId).widgets[0].title).toBe('Agenda conservé');
+  } finally {
+    if (boardId) await page.request.delete(`/api/dashboards/${boardId}`, { headers });
+    if (before.includes('google_calendar')) await page.request.put('/api/services/google_calendar', { headers });
+  }
+});
