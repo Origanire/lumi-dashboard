@@ -12,8 +12,9 @@ export const INITIAL_WIDGETS = [
   },
   {
     id: 2,
-    type: 'agenda',
-    title: 'Échéances du mois',
+    type: 'habits',
+    title: 'Mes habitudes',
+    habits: [],
     x: 7,
     y: 1,
     width: 6,
