@@ -18,7 +18,7 @@ export default function ServiceSubscriptions() {
     } catch (err) { setError(err.message); }
     finally { setBusy(''); }
   }
-  return <section aria-labelledby="services-title"><h2 id="services-title">Mes services</h2><p>Activez les services à proposer dans votre catalogue de widgets. L’assistant IA local ne nécessite aucun compte externe. Pour les autres services, l’autorisation du compte fournisseur se fait ensuite depuis le widget. Désactiver un service conserve vos widgets existants et ne révoque pas l’accès chez le fournisseur.</p>
+  return <section aria-labelledby="services-title"><h2 id="services-title">Mes services</h2><p>Activez les services à proposer dans votre catalogue de widgets. L’assistant IA local ne nécessite aucun compte externe. Pour les autres services, l’autorisation du compte fournisseur se fait ensuite depuis le widget. Désactiver un service met ses widgets en pause et conserve leur configuration. Cela ne révoque pas l’accès chez le fournisseur.</p>
     <label>Rechercher un service<input type="search" value={search} onChange={event => setSearch(event.target.value)} /></label>
     {error && <p role="alert">{error} <button onClick={load}>Réessayer</button></p>}
     {!subscriptions ? <p role="status">Chargement des services…</p> : <ul className="service-list">{Object.entries(services).filter(([, [name]]) => name.toLowerCase().includes(search.toLowerCase())).map(([id, [name, description]]) => <li key={id}><div><strong>{name}</strong><p>{description}</p></div><button className="button button-secondary" aria-pressed={subscriptions.includes(id)} disabled={!!busy} onClick={() => toggle(id)}>{busy === id ? 'Enregistrement…' : subscriptions.includes(id) ? `Désactiver ${name}` : `Activer ${name}`}</button></li>)}</ul>}
