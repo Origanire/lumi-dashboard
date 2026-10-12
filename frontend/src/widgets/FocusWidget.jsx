@@ -1,4 +1,4 @@
-import { notify } from '../components/Notifications';
+import { notify } from '../../../bonus/frontend/Notifications';
 import React, { useEffect, useRef, useState } from 'react';
 
 export default function FocusWidget({ widget }) {

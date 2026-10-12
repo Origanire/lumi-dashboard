@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { dateKey, weekDays, validDate, cleanHabits, toggleHabitDay, streak } from '../src/widgets/habits/habitModel.js';
+import { dateKey, weekDays, validDate, cleanHabits, toggleHabitDay, streak } from '../../bonus/frontend/habits/habitModel.js';
 import { exportDashboard, parseDashboardExport } from '../src/dashboardModel.js';
 const habit = { id: 'read', name: 'Lire', days: ['2026-10-07', '2026-10-08'] };
 test('habit weeks use local calendar dates across year and daylight saving boundaries', () => {

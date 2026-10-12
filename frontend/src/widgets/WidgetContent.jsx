@@ -1,4 +1,5 @@
-import HabitsWidget from './habits/HabitsWidget';
+import { useSubscriptions, widgetService } from '../dashboard/Subscriptions';
+import HabitsWidget from '../../../bonus/frontend/habits/HabitsWidget';
 import OpenAIWidget from './openai/OpenAIWidget';
 import React from 'react';
 import GitHubWidget from './github/GitHubWidget';
@@ -13,6 +14,10 @@ import SpotifyNowPlayingWidget from './spotify/SpotifyNowPlayingWidget';
 import SpotifyTopTracksWidget from './spotify/SpotifyTopTracksWidget';
 
 export default function WidgetContent({ widget, onChange, userId }) {
+  const { active, error, reload } = useSubscriptions();
+  const service = widgetService(widget.type);
+  if (service && !active) return <div role="status">{error || 'Chargement du service…'}{error && <button onClick={reload}>Réessayer</button>}</div>;
+  if (service && !active.includes(service)) return <p>Service désactivé. Activez-le dans « Mes services » pour utiliser ce widget. Votre configuration est conservée.</p>;
   switch (widget.type) {
     case 'habits':
       return <HabitsWidget widget={widget} onChange={onChange} />;
