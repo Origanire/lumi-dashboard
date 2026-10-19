@@ -41,8 +41,6 @@ def validate(root, work):
         ports: !reset []
       mailpit:
         ports: !reset []
-      ollama:
-        ports: !reset []
     ''')
     project = work.name
     compose = ['docker', 'compose', '-p', project, '-f', str(clone / 'docker-compose.yml'), '-f', str(override)]

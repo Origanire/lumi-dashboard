@@ -4,7 +4,7 @@ Projet de tableau de bord réalisé dans le cadre du module G-WEB-500.
 
 ## Présentation
 
-L'application propose des dashboards personnalisables, sauvegardés dans le compte utilisateur, avec cinq intégrations externes (GitHub, Spotify, Gmail, Google Calendar et Open-Meteo), un assistant IA local Ollama et trois outils locaux.
+L'application propose des dashboards personnalisables, sauvegardés dans le compte utilisateur, avec cinq intégrations externes (GitHub, Spotify, Gmail, Google Calendar et Open-Meteo), un assistant IA Mistral et trois outils locaux.
 
 Lumi rassemble des notes, un minuteur de concentration et des widgets dans un tableau de bord personnalisable. L’interface React communique avec une API Rust pour les comptes et les sessions.
 
@@ -41,7 +41,7 @@ npm install
 
 ## Configuration
 
-Copier la configuration locale puis démarrer PostgreSQL, la boîte mail locale et Ollama :
+Copier la configuration locale puis démarrer PostgreSQL et la boîte mail locale :
 
 ```bash
 cp .env.example .env
@@ -64,7 +64,7 @@ Voir le [contrat API des comptes](docs/api/accounts.md) pour le modèle relation
 
 ## Lancement
 
-`npm run dev` démarre automatiquement PostgreSQL, Mailpit et Ollama via Docker Compose, attend leur disponibilité et initialise le modèle Qwen2.5 14B, puis lance le backend et Vite. Docker doit être démarré. Le premier lancement télécharge environ 9 Go de modèle, en plus des images Docker.
+`npm run dev` démarre automatiquement PostgreSQL et Mailpit via Docker Compose, attend leur disponibilité, puis lance le backend et Vite. Docker doit être démarré. Pour l’assistant IA, renseigner `MISTRAL_API_KEY` dans `.env` (voir ci-dessous). Aucun modèle n’est téléchargé.
 
 ### Développement
 
@@ -144,9 +144,9 @@ docker compose build
 docker compose up -d --wait
 ```
 
-Ouvrir **http://localhost:8080**. Nginx sert React et transmet `/api` et `/about.json` au backend Rust ; PostgreSQL, Mailpit et Ollama démarrent avec l’application ; le backend attend l’initialisation du modèle. Les migrations sont appliquées automatiquement. Les e-mails locaux restent consultables sur http://localhost:8025. `docker-compose build` et `docker-compose up` conviennent également si le binaire Compose historique est installé.
+Ouvrir **http://localhost:8080**. Nginx sert React et transmet `/api` et `/about.json` au backend Rust ; PostgreSQL et Mailpit démarrent avec l’application. Les migrations sont appliquées automatiquement. Les e-mails locaux restent consultables sur http://localhost:8025. `docker-compose build` et `docker-compose up` conviennent également si le binaire Compose historique est installé.
 
-Le fichier racine est `docker-compose.yml`. `npm run services` démarre PostgreSQL, Mailpit et Ollama, puis initialise le modèle pour le développement. `docker compose down` arrête la stack sans effacer les données ; ne pas ajouter `-v` si les comptes doivent être conservés.
+Le fichier racine est `docker-compose.yml`. `npm run services` démarre PostgreSQL et Mailpit pour le développement. `docker compose down` arrête la stack sans effacer les données ; ne pas ajouter `-v` si les comptes doivent être conservés.
 
 `DOCKER_APP_URL` permet de changer l’origine utilisée dans les liens e-mail Docker (défaut `http://localhost:8080`). Cette stack utilise Mailpit ; pour un déploiement public, configurer un serveur SMTP réel et HTTPS. Les identifiants OAuth `VITE_GOOGLE_CLIENT_ID` et `VITE_SPOTIFY_CLIENT_ID` sont injectés à la compilation : reconstruire l’image frontend après modification et autoriser l’origine/URL de retour correspondante chez le fournisseur.
 
@@ -160,7 +160,7 @@ Tous les widgets possèdent un titre et une taille configurables.
 | --- | --- | --- | --- |
 | GitHub | Push récents | Dépôt, 1–20 événements, intervalle 300–3600 s | Dépôts publics ou jeton personnel, cache mémoire 30 s |
 | GitHub | Graphe des commits | Dépôt, intervalle 300–3600 s | Branches et commits, historique des observations en session |
-| Ollama | Assistant IA local | Titre et taille | Demande explicite, Qwen2.5 14B sans clé API |
+| Mistral | Assistant IA | Titre et taille | Demande explicite, Ministral 3 3B, clé côté serveur |
 | Spotify | Lecture en cours | Client ID, rafraîchissement 5–120 s | OAuth PKCE, validation avec compte réel restante |
 | Spotify | Top titres | Client ID, période, 1–10 titres, intervalle 30–3600 s | Actualisation périodique |
 | Gmail | Non lus | Client ID, 1–20 messages, intervalle 30–3600 s | OAuth, lecture et actions explicites |
@@ -188,7 +188,7 @@ flowchart LR
   B --> S[Spotify]
   B --> GH[GitHub]
   B --> W[Open-Meteo]
-  A --> O[Ollama / Qwen2.5]
+  A --> O[API Mistral / Ministral 3 3B]
 ```
 
 Les comptes, sessions, dashboards et abonnements sont conservés en PostgreSQL. Chaque opération de dashboard vérifie le propriétaire depuis la session. Les versions de sauvegarde détectent les modifications concurrentes et demandent de recharger en cas de conflit. Les intégrations externes sont appelées depuis le navigateur ; les jetons Google restent en mémoire, et les jetons Spotify/GitHub sont conservés uniquement en mémoire, liés à la session Lumi. Les routes privées utilisent la session et les permissions vérifiées par le serveur.
@@ -236,13 +236,22 @@ Les tests de services unitaires utilisent des réponses simulées. Ils ne rempla
 
 La connexion Spotify s’ouvre dans une fenêtre dédiée : le dashboard reste ouvert et conserve les connexions Gmail, Calendar et GitHub en mémoire. Autoriser les fenêtres contextuelles pour Lumi. Un rechargement manuel de la page efface toujours les jetons externes.
 
-## Assistant IA local (Ollama)
+## Assistant IA Mistral
 
-Le widget utilise **Qwen2.5 14B**, un modèle multilingue exécuté par Ollama sur le serveur Lumi. Aucune clé API ni compte fournisseur n’est nécessaire. `npm run dev` démarre les services et télécharge automatiquement le modèle au premier lancement (environ 9 Go, en plus de l’image Docker). `docker compose up --build` initialise également le modèle avant le backend. Le volume `ollama_data` conserve le téléchargement.
+Le widget appelle **Ministral 3 3B** (`ministral-3b-2512`) via le backend. C’est le modèle de conversation le moins cher du [tarif Mistral consulté le 19 octobre 2026](https://docs.mistral.ai/inference/pricing) : 0,10 $ par million de tokens en entrée et 0,10 $ en sortie. Le mode Free de Studio permet également des essais sous quotas.
 
-Activer **Assistant IA local** dans **Mon compte → Mes services**, puis ajouter **Assistant IA local · Poser une question**. Les anciens widgets sont conservés. Chaque demande est indépendante, sans historique stocké en base ni accès aux autres widgets. La réponse peut prendre plus de temps sur CPU, surtout au premier envoi. Les demandes arithmétiques courantes passent par un calculateur décimal ; l’expression interprétée et le résultat calculé s’affichent. Pour les quatre opérations de base, une expression explicite permet de calculer directement sans modèle.
+Créer une clé dans [Mistral Studio](https://console.mistral.ai), rubrique **API Keys → Create new key**, puis compléter le fichier `.env` existant :
 
-Configuration locale : `OLLAMA_URL=http://127.0.0.1:11435`, `OLLAMA_PORT=11435` et `OLLAMA_MODEL=qwen2.5:14b`. Dans Docker, le backend utilise automatiquement `http://ollama:11434`. Le port hôte reste limité à localhost. Les questions restent sur le serveur de cette instance ; les fonctionnalités cloud d’Ollama sont désactivées. Une connexion Internet est nécessaire à l’installation, puis le modèle peut répondre hors ligne. Voir [le bilan et le guide de l’assistant local](docs/ASSISTANT_LOCAL.md).
+```dotenv
+MISTRAL_API_KEY=votre_cle_privee
+MISTRAL_MODEL=ministral-3b-2512
+```
+
+La clé reste côté serveur ; ne pas la placer dans une variable `VITE_` ni la committer. Redémarrer `npm run dev`, ou reconstruire et relancer la stack avec `docker compose up -d --build --wait --remove-orphans`. Cette dernière commande retire les anciens conteneurs Ollama sans effacer leur volume. Le projet démarre sans clé, mais l’assistant indique qu’il doit être configuré.
+
+Activer **Assistant IA Mistral** dans **Mon compte → Mes services**, puis ajouter le widget. Les identifiants historiques `openai_chat` et `openai` restent compatibles. Les questions sont envoyées à Mistral au clic sur Envoyer ; Lumi ne stocke pas les échanges en base. Chaque demande est indépendante et ne consulte ni les autres widgets ni les données en direct.
+
+Les expressions arithmétiques explicites sont calculées en Rust sans appel API ; les calculs en langage naturel sont traduits par Mistral, vérifiés puis calculés en Rust. Limites : 8 000 caractères, cinq demandes par minute par utilisateur, une génération simultanée et 384 tokens de réponse (256 pour interpréter un calcul), sans réessai automatique payant. Voir [le guide Mistral](docs/ASSISTANT_MISTRAL.md).
 
 ## Corrections après soutenance
 
@@ -293,3 +302,5 @@ Validation actualisée le 11 octobre : 48 tests frontend, 39 tests Rust et 18 pa
 ### Conformité après soutenance
 
 Les nouvelles instances et imports de services nécessitent une activation côté serveur. Désactiver un service conserve ses widgets en pause. Les bonus autonomes sont regroupés dans `bonus/` ; voir [le périmètre](BONUS.md), [le bilan](docs/REMEDIATION_SOUTENANCE.md) et [les preuves du 11 octobre](docs/VERIFICATION_2026-10-11.md).
+
+Les sommes d’intervalles entiers avec exclusions sont aussi calculées en Rust après interprétation par Mistral : « somme des nombres de 1 à 12 en excluant 11 » donne **67**. Le plan est vérifié pour conserver les nombres de la demande ; les intervalles sont bornés à 10 000 entiers et 100 exclusions distinctes.

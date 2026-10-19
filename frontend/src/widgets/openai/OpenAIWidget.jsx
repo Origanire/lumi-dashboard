@@ -1,45 +1,80 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import api from '../../api';
-// Keep the historical component path and widget ID for existing dashboards.
+
+// Historical component path and widget ID keep saved dashboards compatible.
 export default function OpenAIWidget() {
-  const id=useId();
-  const [prompt,setPrompt]=useState('');
-  const [answer,setAnswer]=useState(null);
-  const [error,setError]=useState('');
-  const [busy,setBusy]=useState(false);
-  const [status,setStatus]=useState(null);
-  const [checking,setChecking]=useState(false);
-  const live=useRef(true);
+  const id = useId();
+  const [prompt, setPrompt] = useState('');
+  const [answer, setAnswer] = useState(null);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState(null);
+  const [checking, setChecking] = useState(false);
+  const live = useRef(true);
+  const ready = status?.configured && status?.provider === 'mistral';
+
   async function checkStatus() {
-    setChecking(true);setError('');
-    try {const data=await api('/ai/status');if(live.current)setStatus(data);}
-    catch(err){if(live.current){setStatus(null);setError(err.message);}}
-    finally{if(live.current)setChecking(false);}
+    setChecking(true);
+    setError('');
+    try {
+      const data = await api('/ai/status', { timeoutMs: 15000 });
+      if (live.current) setStatus(data);
+    } catch (err) {
+      if (live.current) { setStatus(null); setError(err.message); }
+    } finally {
+      if (live.current) setChecking(false);
+    }
   }
-  useEffect(()=>{
-    live.current=true;checkStatus();
-    return ()=>{live.current=false;};
-  },[]);
+  useEffect(() => {
+    live.current = true;
+    checkStatus();
+    return () => { live.current = false; };
+  }, []);
+
   async function submit(event) {
-    event.preventDefault();if(busy||!status?.configured||!prompt.trim())return;
-    setBusy(true);setError('');setAnswer(null);
-    try {const result=await api('/ai/ask',{method:'POST',body:{prompt:prompt.trim()},timeoutMs:310000});if(live.current)setAnswer(result);}
-    catch(err){if(live.current)setError(err.message);}
-    finally{if(live.current)setBusy(false);}
+    event.preventDefault();
+    if (busy || !ready || !prompt.trim()) return;
+    setBusy(true);
+    setError('');
+    setAnswer(null);
+    try {
+      const result = await api('/ai/ask', { method: 'POST', body: { prompt: prompt.trim() }, timeoutMs: 65000 });
+      if (live.current) setAnswer(result);
+    } catch (err) {
+      if (live.current) setError(err.message);
+    } finally {
+      if (live.current) setBusy(false);
+    }
   }
+
   return <div className="openai-widget">
-    <p className="field-hint">Posez une question générale à l’IA. Chaque demande est indépendante ; l’assistant ne consulte pas de données en direct.</p>
-    <p role="status">{checking?'Vérification du modèle local…':status?.configured?`Modèle local : ${status.model || 'Ollama'}.`:status?.message || 'L’assistant local n’est pas disponible.'}</p>
-    {!status?.configured&&<button className="text-button" disabled={checking} onClick={checkStatus}>Vérifier le modèle</button>}
-    <form onSubmit={submit}>
-      <label htmlFor={`${id}-prompt`}>Votre demande</label>
-      <textarea id={`${id}-prompt`} value={prompt} onChange={event=>setPrompt(event.target.value)} maxLength={8000} rows={4} required disabled={busy} placeholder="Explique-moi un concept, aide-moi à rédiger un texte…" />
-      <small>Les réponses peuvent contenir des erreurs. Vérifiez les informations importantes.</small>
-      <small>Votre question est traitée sur le serveur Lumi par Ollama, sans compte externe. L’échange reste dans cette session du widget.</small>
-      <button className="button button-dark" disabled={busy||!status?.configured||!prompt.trim()}>{busy?'Réponse en cours…':'Envoyer la demande'}</button>
+    <div className="ai-status-row">
+      <span className={`ai-status ${ready ? 'is-ready' : ''}`} role="status">
+        <span className="ai-status-dot" aria-hidden="true" />
+        {checking ? 'Connexion…' : busy ? 'Réflexion en cours…' : ready ? 'Prêt à vous aider' : 'Indisponible'}
+      </span>
+      {answer && <button type="button" className="text-button" disabled={busy} onClick={() => { setAnswer(null); setPrompt(''); }}>Effacer l’échange</button>}
+    </div>
+    {!checking && !ready && <div className="ai-unavailable">
+      <p>{status?.provider && status.provider !== 'mistral' ? 'L’ancien serveur IA répond encore. Redémarrez le backend pour utiliser Mistral.' : status?.message || 'Impossible de joindre l’assistant.'}</p>
+      <button type="button" className="text-button" onClick={checkStatus}>Réessayer</button>
+    </div>}
+    {answer && <section className="ai-reply" aria-label="Réponse de l’assistant IA" aria-live="polite">
+      <span className="ai-reply-label">✦ Mistral</span>
+      <div className="openai-answer">{answer.text}</div>
+      {answer.incomplete && <small>La réponse a atteint sa limite de longueur.</small>}
+    </section>}
+    {busy && <div className="ai-thinking" role="status"><span aria-hidden="true">✦</span> Mistral prépare sa réponse…</div>}
+    <form className="ai-composer" onSubmit={submit} aria-busy={busy}>
+      <label className="ai-sr-only" htmlFor={`${id}-prompt`}>Votre demande</label>
+      <textarea id={`${id}-prompt`} value={prompt} onChange={event => setPrompt(event.target.value)} maxLength={8000} rows={3} required disabled={busy} placeholder="Une question, une idée, un calcul…" />
+      <div className="ai-composer-footer">
+        <span className="ai-privacy">Envoyé à Mistral</span>
+        <button className="ai-send" aria-label="Envoyer la demande" disabled={busy || !ready || !prompt.trim()}>
+          {busy ? 'En cours…' : 'Envoyer'} <span aria-hidden="true">↗</span>
+        </button>
+      </div>
     </form>
-    {busy&&<p role="status">Le modèle local prépare la réponse… Le premier envoi peut être plus lent.</p>}
-    {error&&<p role="alert" className="feedback error">{error}</p>}
-    {answer&&<section aria-label="Réponse de l’assistant IA"><h4>Réponse</h4><div className="openai-answer">{answer.text}</div>{answer.incomplete&&<p>La réponse a atteint sa limite de longueur.</p>}<button className="text-button" onClick={()=>{setAnswer(null);setPrompt('');}}>Effacer l’échange</button></section>}
+    {error && <p role="alert" className="ai-error">{error}</p>}
   </div>;
 }

@@ -48,7 +48,7 @@ export default function Account({ user, initials }) {
           <p>Votre compte, vos dashboards, vos notes, votre suivi d’habitudes et vos abonnements sont conservés sur le serveur PostgreSQL pour les retrouver après reconnexion. Les mots de passe et les jetons de session y sont hachés.</p>
           <p>Votre connexion Lumi est conservée sept jours dans un cookie protégé, même après fermeture du navigateur ou redémarrage du serveur. Se déconnecter ferme cette session. Les préférences de thème et d’accessibilité restent sur cet appareil.</p>
           <p>Les connexions Google, Spotify et GitHub sont temporaires. Les fournisseurs reçoivent les demandes que vous leur adressez. La météo transmet votre ville et votre adresse IP à Open-Meteo. Vous pouvez exporter et supprimer vos dashboards depuis le tableau de bord.</p>
-          <p>Les questions de l’assistant IA sont traitées par Ollama sur le serveur de cette instance. Lumi ne conserve pas ces questions ni les réponses en base ; leur affichage reste dans la session du widget.</p>
+          <p>Les questions de l’assistant IA sont transmises par le serveur Lumi à l’API Mistral pour générer la réponse. Lumi ne conserve pas ces questions ni les réponses en base ; leur affichage reste dans la session du widget.</p>
           <p>Pour supprimer l’ensemble de votre compte, contactez l’administrateur de cette instance. La suppression du compte n’est pas encore disponible en libre-service.</p>
         </div>
       </section>

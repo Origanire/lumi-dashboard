@@ -8,8 +8,8 @@ export const WIDGET_TYPES = {
     defaultHeight: 4,
   },
   openai_chat: {
-    label: 'Assistant IA local · Poser une question',
-    eyebrow: 'Ollama',
+    label: 'Assistant IA',
+    eyebrow: 'Mistral',
     icon: '✦',
     color: 'mint',
     defaultWidth: 6,

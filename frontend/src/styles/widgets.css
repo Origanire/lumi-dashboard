@@ -327,7 +327,30 @@
 
 
 
-.openai-widget { overflow:auto; min-height:0; }
-.openai-widget form { display:grid; gap:12px; }
-.openai-widget textarea { width:100%; resize:vertical; min-height:90px; }
-.openai-answer { white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.6; }
+/* Mistral assistant */
+.openai-widget { display:flex; flex-direction:column; gap:16px; overflow:auto; min-height:0; }
+.ai-status-row { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.ai-status { display:inline-flex; align-items:center; gap:7px; color:var(--muted); font-size:12px; }
+.ai-status-dot { width:6px; height:6px; border-radius:50%; background:var(--line-strong); flex-shrink:0; }
+.ai-status.is-ready .ai-status-dot { background:#27916b; box-shadow:0 0 0 3px #27916b16; }
+.openai-widget .ai-composer { display:flex; flex-direction:column; gap:0; padding:14px; border:1px solid var(--line); border-radius:14px; background:var(--surface-alt); transition:border-color .15s; }
+.ai-composer:focus-within { border-color:var(--ink); }
+.openai-widget textarea { display:block; width:100%; min-height:86px; resize:vertical; padding:0; border:0; border-radius:0; background:transparent; color:var(--ink); font:inherit; font-size:14px; line-height:1.65; box-sizing:border-box; }
+.openai-widget textarea:focus-visible { outline:0; }
+.openai-widget textarea::placeholder { color:var(--muted); }
+.ai-composer-footer { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-top:12px; }
+.ai-privacy { color:var(--muted); font-size:11px; }
+.ai-send { display:inline-flex; align-items:center; justify-content:center; gap:14px; min-height:40px; padding:9px 16px; border:1px solid var(--ink); border-radius:9px; background:var(--ink); color:var(--inverse); font:inherit; font-size:12px; font-weight:600; cursor:pointer; }
+.ai-send span { font-size:18px; line-height:1; }
+.ai-send:disabled { opacity:.4; cursor:default; }
+.ai-send:not(:disabled):hover { opacity:.8; }
+.ai-reply { padding:16px 0 4px; border-top:1px solid var(--line); }
+.ai-reply-label { display:block; margin-bottom:10px; color:var(--muted); font-size:11px; font-weight:600; letter-spacing:.04em; }
+.openai-answer { white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.75; font-size:14px; }
+.ai-reply small { display:block; margin-top:10px; color:var(--muted); }
+.ai-thinking { display:flex; align-items:center; gap:8px; padding:12px 0; color:var(--muted); font-size:13px; }
+.ai-thinking span { color:var(--ink); }
+.ai-unavailable { padding:12px 14px; border:1px solid var(--line); border-radius:10px; font-size:13px; }
+.ai-unavailable p { margin:0 0 8px; }
+.openai-widget .ai-error { margin:0; padding:12px 14px; border-radius:10px; background:var(--danger-bg); color:var(--danger); font-size:13px; line-height:1.5; }
+.ai-sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }

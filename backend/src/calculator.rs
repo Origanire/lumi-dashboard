@@ -78,6 +78,43 @@ pub struct Calculation {
     pub result: String,
     pub approximate: bool,
 }
+/// Inclusive integer interval; exclusions must be unique members of that interval.
+pub fn sum_range(start: i64, end: i64, exclude: &[i64]) -> Result<Calculation, &'static str> {
+    let count = i128::from(end) - i128::from(start) + 1;
+    if !(1..=10_000).contains(&count) || exclude.len() > 100 {
+        return Err(
+            "Choisissez un intervalle croissant de 10 000 entiers maximum et au plus 100 exclusions.",
+        );
+    }
+    let mut seen = std::collections::HashSet::new();
+    if exclude
+        .iter()
+        .any(|n| *n < start || *n > end || !seen.insert(*n))
+    {
+        return Err(
+            "Chaque nombre exclu doit apparaître une seule fois et appartenir à l’intervalle.",
+        );
+    }
+    let total = (i128::from(start) + i128::from(end)) * count / 2
+        - exclude.iter().map(|n| i128::from(*n)).sum::<i128>();
+    let exclusions = if exclude.is_empty() {
+        String::new()
+    } else {
+        format!(
+            " (sauf {})",
+            exclude
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    };
+    Ok(Calculation {
+        expression: format!("Somme des entiers de {start} à {end}{exclusions}"),
+        result: total.to_string(),
+        approximate: false,
+    })
+}
 pub fn evaluate(expression: &str) -> Result<Calculation, &'static str> {
     let expression = normalize(expression);
     if expression.len() > 512
@@ -209,6 +246,16 @@ impl Parser<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn inclusive_sum_handles_exclusions_and_bounds() {
+        assert_eq!(sum_range(1, 12, &[11]).unwrap().result, "67");
+        assert_eq!(sum_range(-3, 3, &[-1, 1]).unwrap().result, "0");
+        assert_eq!(sum_range(12, 12, &[12]).unwrap().result, "0");
+        assert!(sum_range(12, 1, &[]).is_err());
+        assert!(sum_range(1, 12, &[13]).is_err());
+        assert!(sum_range(1, 12, &[11, 11]).is_err());
+        assert!(sum_range(i64::MIN, i64::MAX, &[]).is_err());
+    }
     #[test]
     fn reported_decimal_regression_and_precedence() {
         assert_eq!(evaluate("12 * 3.1 * 2 - 31.4").unwrap().result, "43");

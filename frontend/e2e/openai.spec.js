@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 async function mount(page, configured = true) {
-  await page.route('**/api/ai/status', route => route.fulfill({ json: { configured, model: "qwen2.5:14b", message: "Le modèle local n’est pas encore téléchargé." } }));
+  await page.route('**/api/ai/status', route => route.fulfill({ json: { configured, provider: "mistral", model: "ministral-3b-2512", message: "La clé Mistral doit être configurée." } }));
   await page.goto('/');
   await page.evaluate(async () => {
     const { default: React } = await import('/node_modules/.vite/deps/react.js');
@@ -13,7 +13,7 @@ async function mount(page, configured = true) {
   });
 }
 
-test('Local AI only sends on submit, renders text safely, and allows clearing', async ({ page }) => {
+test('Mistral only sends on submit, renders text safely, and allows clearing', async ({ page }) => {
   const requests = [];
   await page.route('**/api/ai/ask', route => {
     requests.push(route.request().postDataJSON());
@@ -33,9 +33,9 @@ test('Local AI only sends on submit, renders text safely, and allows clearing', 
   await expect(page.getByLabel('Réponse de l’assistant IA')).toHaveCount(0);
 });
 
-test('Local AI explains missing model and preserves a prompt on API failure', async ({ page }) => {
+test('Mistral explains missing model and preserves a prompt on API failure', async ({ page }) => {
   await mount(page, false);
-  await expect(page.getByText('Le modèle local n’est pas encore téléchargé.', { exact: false })).toBeVisible();
+  await expect(page.getByText('La clé Mistral doit être configurée.', { exact: false })).toBeVisible();
   await page.getByLabel('Votre demande').fill('Bonjour');
   await expect(page.getByRole('button', { name: 'Envoyer la demande' })).toBeDisabled();
   await page.route('**/api/ai/ask', route => route.fulfill({ status: 429, json: { message: 'Quota atteint' } }));
@@ -47,12 +47,27 @@ test('Local AI explains missing model and preserves a prompt on API failure', as
 });
 
 
-test('local model can become ready without reloading or losing the question', async ({ page }) => {
+test('Mistral can become ready without reloading or losing the question', async ({ page }) => {
   await mount(page, false);
   await page.getByLabel('Votre demande').fill('Combien font 2 + 2 ?');
   await expect(page.getByRole('button', { name: 'Envoyer la demande' })).toBeDisabled();
-  await page.route('**/api/ai/status', route => route.fulfill({ json: { configured: true, model: 'qwen2.5:14b' } }));
-  await page.getByRole('button', { name: 'Vérifier le modèle' }).click();
+  await page.route('**/api/ai/status', route => route.fulfill({ json: { configured: true, provider: 'mistral', model: 'ministral-3b-2512' } }));
+  await page.getByRole('button', { name: 'Réessayer' }).click();
   await expect(page.getByRole('button', { name: 'Envoyer la demande' })).toBeEnabled();
   await expect(page.getByLabel('Votre demande')).toHaveValue('Combien font 2 + 2 ?');
+});
+
+
+test('old Ollama backend is detected instead of being labelled Mistral', async ({ page }) => {
+  await mount(page);
+  await page.route('**/api/ai/status', route => route.fulfill({ json: { configured: true, provider: 'ollama', model: 'qwen2.5:14b' } }));
+  await page.reload();
+  await page.evaluate(async () => {
+    const { default: React } = await import('/node_modules/.vite/deps/react.js');
+    const { default: { createRoot } } = await import('/node_modules/.vite/deps/react-dom_client.js');
+    const { default: Widget } = await import('/src/widgets/openai/OpenAIWidget.jsx');
+    createRoot(document.getElementById('root')).render(React.createElement(Widget));
+  });
+  await expect(page.getByText('L’ancien serveur IA répond encore.', { exact: false })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Envoyer la demande' })).toBeDisabled();
 });

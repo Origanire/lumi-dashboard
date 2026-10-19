@@ -375,6 +375,63 @@ async fn local_ai_migration_preserves_custom_titles_and_widget_order(pool: PgPoo
 }
 
 #[sqlx::test]
+async fn mistral_ai_migration_preserves_custom_titles_and_widget_order(pool: PgPool) {
+    let app = lumi_backend::app(pool.clone());
+    let (_, user) = account(&pool, &app, "migration@test.local").await;
+    let widgets = json!([
+        {"id":"a","type":"openai_chat","title":"Assistant IA local · Poser une question"},
+        {"id":"b","type":"openai_chat","title":"Mon assistant"},
+        {"id":"c","type":"weather","title":"Assistant IA local · Poser une question"}
+    ]);
+    let id = uuid::Uuid::new_v4();
+    sqlx::query(
+        "INSERT INTO user_dashboards(id,user_id,name,widgets) VALUES($1,$2,'Migration',$3)",
+    )
+    .bind(id)
+    .bind(uuid::Uuid::parse_str(&user).unwrap())
+    .bind(widgets.clone())
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::raw_sql(include_str!(
+        "../migrations/202610190001_mistral_title.sql"
+    ))
+    .execute(&pool)
+    .await
+    .unwrap();
+    let result: Value = sqlx::query_scalar("SELECT widgets FROM user_dashboards WHERE id=$1")
+        .bind(id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        result[0]["title"],
+        "Assistant IA"
+    );
+    assert_eq!(result[0]["id"], "a");
+    assert_eq!(result[1], widgets[1]);
+    assert_eq!(result[2], widgets[2]);
+    let revision: i64 = sqlx::query_scalar("SELECT revision FROM user_dashboards WHERE id=$1")
+        .bind(id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(revision, 1);
+    sqlx::raw_sql(include_str!(
+        "../migrations/202610190001_mistral_title.sql"
+    ))
+    .execute(&pool)
+    .await
+    .unwrap();
+    let revision: i64 = sqlx::query_scalar("SELECT revision FROM user_dashboards WHERE id=$1")
+        .bind(id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(revision, 1);
+}
+
+#[sqlx::test]
 async fn calculator_requires_subscription_and_preserves_request_quota(pool: PgPool) {
     let app = lumi_backend::app(pool.clone());
     let (token, _) = account(&pool, &app, "calculator@test.local").await;

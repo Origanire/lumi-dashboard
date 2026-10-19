@@ -1,3 +1,5 @@
+> Document historique : Ollama a été remplacé par Mistral. Consulter [le guide actuel](ASSISTANT_MISTRAL.md).
+
 # Assistant IA local — bilan des modifications
 
 Le widget fonctionne avec **Ollama et Qwen2.5 14B**, sans clé API et sans crédit OpenAI. Le modèle répond aux questions courantes, aux demandes de rédaction et aux explications générales en français. Il s’exécute sur le serveur de l’instance Lumi, qui peut être cette machine ou un serveur de déploiement.

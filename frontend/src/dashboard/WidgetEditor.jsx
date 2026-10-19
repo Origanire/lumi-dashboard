@@ -170,7 +170,7 @@ export default function WidgetEditor({ widget, mode, onClose, onSave }) {
             >
               {activating
                 ? 'Activation…'
-                : `Activer le service ${selectedService === 'openai' ? 'Ollama' : type.eyebrow}`}
+                : `Activer le service ${selectedService === 'openai' ? 'Mistral' : type.eyebrow}`}
             </button>
           </div>
         )}
