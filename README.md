@@ -1,5 +1,9 @@
 # Lumi
 
+[![Tests](https://github.com/Origanire/lumi-dashboard/actions/workflows/tests.yml/badge.svg)](https://github.com/Origanire/lumi-dashboard/actions/workflows/tests.yml)
+
+> **English summary.** Customisable dashboards saved to the user's account: React + Vite front end, Rust/Axum API, PostgreSQL with SQLx migrations, Argon2 passwords and HttpOnly sessions. Integrates GitHub, Spotify, Gmail, Google Calendar, Open-Meteo and a Mistral assistant. Epitech project. Documentation below is in French.
+
 Projet de tableau de bord réalisé dans le cadre du module G-WEB-500.
 
 ## Présentation
