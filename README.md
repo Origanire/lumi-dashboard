@@ -251,7 +251,7 @@ Activer **Assistant IA Mistral** dans **Mon compte → Mes services**, puis ajou
 
 Les expressions arithmétiques explicites sont calculées en Rust sans appel API ; les calculs en langage naturel sont traduits par Mistral, vérifiés puis calculés en Rust. Limites : 8 000 caractères, cinq demandes par minute par utilisateur, une génération simultanée et 384 tokens de réponse (256 pour interpréter un calcul), sans réessai automatique payant. Voir [le guide Mistral](docs/ASSISTANT_MISTRAL.md).
 
-## Corrections après soutenance
+## Évolutions après évaluation
 
 Le [bilan des modifications](docs/REMEDIATION_SOUTENANCE.md) relie les corrections à chaque critère du jury : météo réelle, responsive, accessibilité, contrat public et protection du serveur. Les [comparaisons Front/Back/BDD](docs/CHOIX_TECHNOLOGIQUES.md) présentent trois solutions par couche sur les mêmes critères, avec limites et alternatives.
 
@@ -297,7 +297,7 @@ Utiliser la même adresse à chaque ouverture : `localhost` et `127.0.0.1` ne pa
 
 Validation actualisée le 11 octobre : 48 tests frontend, 39 tests Rust et 18 parcours navigateur réussis ; scénario vidéo ignoré par défaut. Le parcours navigateur vérifie les habitudes après rechargement et renommage, ainsi qu’une réouverture avec uniquement les cookies, sans restauration de `sessionStorage` ou `localStorage`. Les tests Rust vérifient la même session avec une nouvelle instance du serveur, son expiration, sa révocation et le rejet des mutations par cookie sans l’en-tête client attendu.
 
-### Conformité après soutenance
+### Conformité
 
 Les nouvelles instances et imports de services nécessitent une activation côté serveur. Désactiver un service conserve ses widgets en pause. Les bonus autonomes sont regroupés dans `bonus/` ; voir [le périmètre](BONUS.md), [le bilan](docs/REMEDIATION_SOUTENANCE.md) et [les preuves du 11 octobre](docs/VERIFICATION_2026-10-11.md).
 
