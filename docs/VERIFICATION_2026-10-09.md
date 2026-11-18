@@ -6,7 +6,7 @@ Le code est synchronisé avec `origin/main` au commit `a930ca7` (`[Update] Ollam
 
 Les fonctionnalités principales sont présentes et les tests automatisés passent. La conformité complète au sujet n’est toutefois pas acquise : recette OAuth réelle incomplète, sources bonus hors du dossier imposé et activation des services contournable par les widgets initiaux/importés. Les points ouverts sont détaillés ci-dessous.
 
-Référence lue intégralement : [sujet Dashboard](dashboard-project.pdf), dix pages PDF, notamment les pages 3 à 8 pour les exigences.
+Référence lue intégralement : sujet Dashboard (non publié), dix pages PDF, notamment les pages 3 à 8 pour les exigences.
 
 ## Exigences et preuves
 

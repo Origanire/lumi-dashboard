@@ -8,8 +8,6 @@ L'application propose des dashboards personnalisables, sauvegardés dans le comp
 
 Lumi rassemble des notes, un minuteur de concentration et des widgets dans un tableau de bord personnalisable. L’interface React communique avec une API Rust pour les comptes et les sessions.
 
-Le sujet du projet est disponible dans [dashboard-project.pdf](docs/dashboard-project.pdf).
-
 La liste des tâches et des priorités est disponible dans [TODO.md](docs/TODO.md). Le [contrôle du 9 octobre 2026](docs/VERIFICATION_2026-10-09.md) détaille les résultats actuels et les réserves de conformité.
 
 Les règles visuelles et les composants de référence sont décrits dans [DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md).
